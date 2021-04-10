@@ -1,0 +1,13 @@
+{
+  "name": "Cloudflare",
+  "version": "1.0.0",
+  "dependencies": {
+    "@jsoverson/shift-codegen": "^7.0.0",
+    "js-beautify": "^1.13.5"
+  },
+  "devDependencies": {
+    "shift-ast": "^6.1.0",
+    "shift-codegen": "^7.0.3",
+    "shift-refactor": "^2.0.0"
+  }
+}
