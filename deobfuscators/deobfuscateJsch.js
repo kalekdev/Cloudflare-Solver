@@ -1,11 +1,15 @@
-const {refactor} = require('shift-refactor');
-const { default: codegen} = require('shift-codegen');
+const {
+    refactor
+} = require('shift-refactor');
+const {
+    default: codegen
+} = require('shift-codegen');
 const Shift = require('shift-ast');
 const beautify = require('js-beautify');
 const fs = require('fs');
 
 // Read file and create refactor session
-let source = fs.readFileSync('../obfuscated/jsch.js', 'utf-8');
+let source = fs.readFileSync('D:/Dev/Cloudsolve/Cloudflare/obfuscated/jsch.js', 'utf-8');
 const $script = refactor(source);
 
 // Find string literal array
@@ -26,7 +30,7 @@ let arrayShiftFunctionString = codegen(
         body: arrayShiftCall.callee.body
     }));
 
-let arrayShiftFunction = eval('(' +arrayShiftFunctionString + ')');
+let arrayShiftFunction = eval('(' + arrayShiftFunctionString + ')');
 arrayShiftFunction(literalArray, arrayShiftIndex);
 
 
@@ -57,9 +61,127 @@ $script(`CallExpression[callee.name = "${arrayIndexingFunctionName}"]`).replace(
 });
 
 
+$script("IfStatement, ForStatement, WhileStatement").filter(node => {
+    // Skipped these scenarios: for (A; (B,C)>D; E) / if ((A,B)>C) / while ((A,B)>C)
+    // requires a deep lookup as test will always contain a non "," BinaryExpression at the top layer.
+    let innerExpression = node.test;
+    if (!innerExpression || innerExpression.operator != ",") innerExpression = node.init;
+    if (!innerExpression || (innerExpression.type != "BinaryExpression") || (innerExpression.operator != ",")) innerExpression = node.update;
+
+    return innerExpression && (innerExpression.type == "BinaryExpression") && (innerExpression.operator == ",");
+})
+    .replace(node => {
+        let innerExpression = node.test;
+        let expressionStatementArray = [];
+
+
+        switch (node.type) {
+            case "IfStatement" || "WhileStatement":
+                expressionStatementArray.push(new Shift.ExpressionStatement({
+                    expression: innerExpression.left
+                }));
+                node.test = innerExpression.right;
+                break;
+            case "ForStatement":
+                // TODO: loop it
+                if (innerExpression && (innerExpression.type == "BinaryExpression") && (innerExpression.operator == ",")) {
+                    expressionStatementArray.push(new Shift.ExpressionStatement({
+                        expression: innerExpression.left
+                    }));
+                    node.test = innerExpression.right;
+                }
+
+                innerExpression = node.init;
+                if (innerExpression && (innerExpression.type == "BinaryExpression") && (innerExpression.operator == ",")) {
+                    expressionStatementArray.push(new Shift.ExpressionStatement({
+                        expression: innerExpression.left
+                    }));
+                    node.init = innerExpression.right;
+                }
+
+                innerExpression = node.update;
+                if (innerExpression && (innerExpression.type == "BinaryExpression") && (innerExpression.operator == ",")) {
+                    expressionStatementArray.push(new Shift.ExpressionStatement({
+                        expression: innerExpression.left
+                    }));
+                    node.update = innerExpression.right;
+                }
+                break;
+            default:
+                console.log("Unknown statement");
+        }
+
+        expressionStatementArray.push(node);
+        return new Shift.Block({
+            statements: expressionStatementArray
+        });
+    });
+
+/*$script("CallExpression").filter(node => {
+    let result = false;
+    node.arguments.forEach(argument => {
+        if (argument.type == 'BinaryExpression' && argument.operator == ",") result = true;
+    });
+
+    return result;
+}).forEach(node => console.log(node));*/
+
+$script("ReturnStatement[expression.type = 'BinaryExpression'][expression.operator = ',']").replace(node => {
+    return new Shift.Block({
+        statements: [
+            new Shift.ExpressionStatement({
+                expression: node.expression.left
+            }),
+            new Shift.ReturnStatement({
+                expression: node.expression.right
+            })
+        ]
+    });
+})
+
+// fix var a = 2, b = (c =3, 2)
+$script("VariableDeclarationStatement").filter(node => {
+    let result = false;
+    node.declaration.declarators.forEach(declarator => {
+        if (declarator.init && declarator.init.type == 'BinaryExpression' && declarator.init.operator == ",") result = true;
+    });
+
+    return result;
+}).replace(node => {
+    let statementsArray = [];
+    node.declaration.declarators.forEach(declarator => {
+        if (declarator.init && declarator.init.type == 'BinaryExpression' && declarator.init.operator == ",") {
+            statementsArray.push(declarator.init.left);
+            declarator.init = declarator.init.right;
+        }
+    });
+    statementsArray.push(node);
+
+    return new Shift.Block({
+        statements: statementsArray
+    });
+})
+
+let keepLooping = true;
+while (keepLooping) {
+    keepLooping = $script("BinaryExpression[operator = ','][left.type = 'AssignmentExpression'][right.type = 'AssignmentExpression']").replace(expression => {
+        return new Shift.Block({
+            statements: [
+                new Shift.ExpressionStatement({
+                    expression: expression.left
+                }),
+                new Shift.ExpressionStatement({
+                    expression: expression.right
+                })
+            ]
+        });
+    }).nodes.length > 0;
+}
+
+
 // Replace dictionary proxy functions
 function isProxyFunc(node) {
-    if(node.expression.type == "FunctionExpression" && node.expression.params.items.length === 2) return true;
+    if (node.expression.type == "FunctionExpression" && node.expression.params.items.length === 2) return true;
     return false;
 }
 
@@ -91,7 +213,6 @@ $script("AssignmentExpression[binding.expression.value.length = 5]")
             });
     });
 
-
 // Create output and write to file
 let output = beautify($script.codegen().toString());
-fs.writeFileSync('../deobfuscated/deobJsch.js', output);
+fs.writeFileSync('D:/Dev/Cloudsolve/Cloudflare/deobfuscated/deobJsch.js', output);
