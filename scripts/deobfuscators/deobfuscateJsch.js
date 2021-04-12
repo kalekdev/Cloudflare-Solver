@@ -69,7 +69,7 @@ $script("IfStatement, ForStatement, WhileStatement").filter(node => {
     if (!innerExpression || (innerExpression.type != "BinaryExpression") || (innerExpression.operator != ",")) innerExpression = node.update;
 
     return innerExpression && (innerExpression.type == "BinaryExpression") && (innerExpression.operator == ",");
-})
+})Shift.State
     .replace(node => {
         let innerExpression = node.test;
         let expressionStatementArray = [];

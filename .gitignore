@@ -1,2 +1,3 @@
-# Project exclude paths
+# Exclude modules and typescript bin
 /node_modules/
+/dist/
