@@ -52,7 +52,6 @@ let arrayIndexingFunctionName = arrayIndexingFunctionNode.parents().nodes[0].bin
 let arrayIndexingFunctionString = codegen(arrayIndexingFunctionNode.nodes[0]);
 let arrayValueExtractionFunction = eval('(' + arrayIndexingFunctionString + ')');
 
-
 // Find and replace usages of array indexing function
 $script(`CallExpression[callee.name = "${arrayIndexingFunctionName}"]`).replace(node => {
     return new Shift.LiteralStringExpression({
@@ -99,7 +98,8 @@ $script("ForStatement[node.test.type = 'BinaryExpression'][node.test.operator = 
 
     let ifBodyStatements = [node.body];
     if (node.type == "ForStatement" && node.update)
-        ifBodyStatements.push(new Shift.ExpressionStatement({
+        ifBodyS
+    tatements.push(new Shift.ExpressionStatement({
             expression: node.update
         }))
 
@@ -113,7 +113,10 @@ $script("ForStatement[node.test.type = 'BinaryExpression'][node.test.operator = 
     })
 
     statementsArray = [];
-    if (node.type == "ForStatement") statementsArray.push(node.init);
+    if (node.type == "ForStatement")
+        statementsArray.push(new Shift.ExpressionStatement({
+            expression: node.init
+        }));
 
     statementsArray.push(new Shift.VariableDeclarationStatement({
         declaration: new Shift.VariableDeclaration({
@@ -124,13 +127,16 @@ $script("ForStatement[node.test.type = 'BinaryExpression'][node.test.operator = 
                 })
             })
         })
-    }))
+    }));
 
     statementsArray.push(new Shift.DoWhileStatement({
         body: new Shift.BlockStatement({
             statements: [leftTestStatement, ifStatement]
+        }),
+        test: new Shift.IdentifierExpression({
+            name: resultName
         })
-    }))
+    }));
 
     return new Shift.Block({
         statements: statementsArray
@@ -146,7 +152,7 @@ $script("ForStatement[node.test.type = 'BinaryExpression'][node.test.operator = 
     return result;
 }).forEach(node => console.log(node));*/
 
-/*$script("ReturnStatement[expression.type = 'BinaryExpression'][expression.operator = ',']").replace(node => {
+$script("ReturnStatement[expression.type = 'BinaryExpression'][expression.operator = ',']").replace(node => {
     return new Shift.Block({
         statements: [
             new Shift.ExpressionStatement({
@@ -157,10 +163,10 @@ $script("ForStatement[node.test.type = 'BinaryExpression'][node.test.operator = 
             })
         ]
     });
-})*/
+})
 
 // fix var a = 2, b = (c =3, 2)
-/*$script("VariableDeclarationStatement").filter(node => {
+$script("VariableDeclarationStatement").filter(node => {
     let result = false;
     node.declaration.declarators.forEach(declarator => {
         if (declarator.init && declarator.init.type == 'BinaryExpression' && declarator.init.operator == ",") result = true;
@@ -180,11 +186,12 @@ $script("ForStatement[node.test.type = 'BinaryExpression'][node.test.operator = 
     return new Shift.Block({
         statements: statementsArray
     });
-})*/
+})
 
 let keepLooping = true;
+//[left.type = 'AssignmentExpression'][right.type = 'AssignmentExpression']
 while (keepLooping) {
-    keepLooping = $script("BinaryExpression[operator = ','][left.type = 'AssignmentExpression'][right.type = 'AssignmentExpression']").replace(expression => {
+    keepLooping = $script("BinaryExpression[operator = ',']").replace(expression => {
         return new Shift.Block({
             statements: [
                 new Shift.ExpressionStatement({
