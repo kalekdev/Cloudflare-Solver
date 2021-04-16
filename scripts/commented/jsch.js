@@ -567,7 +567,13 @@
                 };
             }
             if (A["status"] != 200 && A["status"] != 304) return z(), void 0;
-            x["NzSMt"](o, A), l("cf_chl_prog", "b" + d["_cf_chl_ctx"]["chLog"]["c"], 1), new d["Function"](s(A["responseText"]))(), l("cf_chl_prog", x["fGWok"]("a", d["_cf_chl_ctx"]["chLog"]["c"]), 1);
+            // o(A) does nothing
+            x["NzSMt"](o, A);
+            l("cf_chl_prog", "b" + d["_cf_chl_ctx"]["chLog"]["c"], 1);
+            // new document.Function() then execute
+            new d["Function"](s(A["responseText"]))();
+            // set chl_prog to a + chLog.c
+            l("cf_chl_prog", x["fGWok"]("a", d["_cf_chl_ctx"]["chLog"]["c"]), 1);
         };
 
         C = r["compressToEncodedURIComponent"](JSON["stringify"](d["_cf_chl_ctx"]))["replace"]("+", x["ggcuV"]);
@@ -846,24 +852,47 @@
                 }
             },
             g: function(E) {
-                if (v["VqEwt"]("jIPGv", "jIPGv")) return v["VvHbu"](null, E) ? "" : C["a"](E, 6, function(F) {
-                    var G, H;
-                    if (G = {}, G["WRAYW"] = function(I, J) {
-                        return I < J;
-                    }, G["ebmtM"] = "null", G["feGoU"] = function(I, J) {
-                        return I + J;
-                    }, G["BfKzG"] = function(I, J) {
-                        return I + J;
-                    }, G["sXIJe"] = function(I, J) {
-                        return v["gnOEU"](I, J);
-                    }, H = G, v["PePCe"] !== "ukCEv") var I = function I() {
-                        var J;
-                        for (J = v["length"], A = 0; H["WRAYW"](B, J); z[A] = B(C, D) || H["ebmtM"], z += 1);
-                        var K;
-                        return K = 0 === E["length"] ? "[]" : F ? H["feGoU"](H["BfKzG"]("[\n" + G + H["join"](H["sXIJe"](",\n", I)), "\n") + J, "]") : "[" + K["join"](",") + "]", L = M, K;
-                    };
-                    else return "b-wt3OXVgURhIkio0T+dvNqCGxFm6s$8a4Srn127BQjHy5pLYEJlZK9MWczuPAeDf" ["charAt"](F);
-                });
+                if (v["VqEwt"]("jIPGv", "jIPGv"))
+                    return v["VvHbu"](null, E) ? "" : C["a"](E, 6, function(F) {
+                        var G, H;
+                        G = {};
+                        G["WRAYW"] = function(I, J) {
+                            return I < J;
+                        };
+                        G["ebmtM"] = "null";
+                        G["feGoU"] = function(I, J) {
+                            return I + J;
+                        };
+                        G["BfKzG"] = function(I, J) {
+                            return I + J;
+                        };
+                        G["sXIJe"] = function(I, J) {
+                            return v["gnOEU"](I, J);
+                        };
+                        H = G;
+                        if (v["PePCe"] !== "ukCEv")
+                            var I = function I() {
+                                var J;
+                                for (J = v["length"], A = 0; H["WRAYW"](B, J); z += 1)
+                                    z[A] = B(C, D) || H["ebmtM"];
+                                var K = 0;
+
+                                if(0 === E["length"])
+                                    K= "[]";
+                                else if(F)
+                                    K= H["feGoU"](H["BfKzG"]("[\n" + G + H["join"](H["sXIJe"](",\n", I)), "\n") + J, "]");
+                                else
+                                    K="[" + K["join"](",") + "]";
+
+                                L=M;
+
+                                return K;
+
+                                return K = 0 === E["length"] ? "[]" : F ? H["feGoU"](H["BfKzG"]("[\n" + G + H["join"](H["sXIJe"](",\n", I)), "\n") + J, "]") : "[" + K["join"](",") + "]", L = M, K;
+                            };
+                        else
+                            return "b-wt3OXVgURhIkio0T+dvNqCGxFm6s$8a4Srn127BQjHy5pLYEJlZK9MWczuPAeDf" ["charAt"](F);
+                    });
                 else var F = function F() {
                     try {
                         return !!f["addEventListener"];
@@ -1033,6 +1062,7 @@
         return D;
     }();
 
+    // Decode load challenge response
     s = function(u) {
         var v, w, x, y, y, u, z, A;
         v = {};

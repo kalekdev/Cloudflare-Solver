@@ -1,5 +1,6 @@
 import express, { NextFunction, Request, Response } from 'express';
 import Controller from "./controllers/controller";
+import CloudflareController from "./controllers/cloudflareController";
 
 export default class Server {
     private app: express.Express;
@@ -11,7 +12,7 @@ export default class Server {
         this.app = express();
         this.port = process.env.PORT || 3000;
         this.controllers = [
-            // Register controllers here
+            new CloudflareController()
         ]
         this.verbose = verbose;
 
