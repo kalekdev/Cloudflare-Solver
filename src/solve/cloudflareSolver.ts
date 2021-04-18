@@ -1,21 +1,25 @@
-import { CookieJar } from 'tough-cookie';
-import { promisify } from 'util';
+import {CookieJar} from 'tough-cookie';
 import got, {Got} from "got";
+import * as tunnel from 'tunnel';
 import CloudflareUtils from "./cloudflareUtils";
 import {refactor} from "shift-refactor";
+import {JSDOM} from 'jsdom';
 
 export default class CloudflareSolver {
     protected solverOptions: CloudflareSolverOptions;
-    protected baseUrl: string;
+    protected baseUrl!: string;
     protected httpClient: Got;
     protected cookieJar: CookieJar;
 
+    protected Dom: JSDOM;
     protected ChlOpts: any;
+    protected ChlCtx: any;
+    protected LzAlphabet!: string;
+    protected GetChallengePath!: string;
 
     constructor(options: CloudflareSolverOptions) {
         options.userAgent = options.userAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.72 Safari/537.36";
         this.solverOptions = options;
-        this.baseUrl = CloudflareUtils.extractBaseUrl(options.url as string);
 
         // Bind cookie jar for usage in got
         this.cookieJar = new CookieJar();
@@ -23,8 +27,16 @@ export default class CloudflareSolver {
             headers: {
                 'user-agent': options.userAgent
             },
+            agent: {
+                https: tunnel.httpsOverHttp({
+                    proxy: {
+                        port: 8888,
+                    }
+                })
+            },
             cookieJar: this.cookieJar,
-            throwHttpErrors: false
+            throwHttpErrors: false,
+            retry: 0
         });
     }
 
@@ -34,29 +46,60 @@ export default class CloudflareSolver {
 
         const $script = refactor(scriptResponse.body);
         // @ts-ignore
-        let arrayString = $script('StaticMemberExpression[object.type = "LiteralStringExpression"]').nodes[0].object.value;
-        // TODO:
-        // Extract initial payload compression function / alphabet.
-        // Extract initial payload submission URL.
-        // Set the Chl_ctx variables.
+        let stringArray = $script('StaticMemberExpression[object.type = "LiteralStringExpression"]').nodes[0].object.value.split(',');
+        this.LzAlphabet = stringArray.find((s: string) => s.length == 65 && !s.includes('$'));
+        this.GetChallengePath = String(scriptResponse.body.match(/\/[.|0-9]*:\d{10}:.{64}\//));
+
+        this.ChlCtx = {
+            chLog: {'c': 0},
+            chReq: this.ChlOpts.cType,
+            cNounce: this.ChlOpts.cNounce,
+            chC: 0, chCAS: 0, oV: 1,
+            cRq: this.ChlOpts.cRq
+        };
+        this.ChlCtx.chLog[this.ChlCtx.chLog.c++] = {'start': new Date().getTime()};
     }
 
     async solve(): Promise<CloudflareSolverResult> {
         if (this.solverOptions.url === undefined) return {error: true, reason: 'Url cannot be undefined'}
         if (this.solverOptions.captcha) return {error: true, reason: 'Unsupported challenge type'};
+        this.baseUrl = CloudflareUtils.extractBaseUrl(this.solverOptions.url as string);
 
         let response = await this.httpClient.get(this.solverOptions.url);
         this.ChlOpts = CloudflareUtils.extractChlOps(response.body);
+        this.Dom = new JSDOM(response.body, {
+            runScripts: 'dangerously',
+            pretendToBeVisual: true,
+            url: this.solverOptions.url
+        })
 
         // GET necessary gifs
         await this.httpClient.get(`${this.baseUrl}/cdn-cgi/images/trace/jschal/js/nocookie/transparent.gif?ray=${this.ChlOpts.cRay}`);
         await this.httpClient.get(`${this.baseUrl}/cdn-cgi/images/trace/jschal/nojs/transparent.gif?ray=${this.ChlOpts.cRay}`);
         await this.extractOrchestrateValues();
 
+        this.cookieJar.setCookieSync('cf_chl_prog=e', this.baseUrl);
+        let getChallengeUrl = `${this.baseUrl}/cdn-cgi/challenge-platform/h/g/flow/ov1${this.GetChallengePath}${this.ChlOpts.cRay}/${this.ChlOpts.cHash}`;
+
+        let compressedCtx = CloudflareUtils.lzCompress(JSON.stringify(this.ChlCtx), this.LzAlphabet).replace('+', '%2b');
+        let payload = 'v_' + this.ChlOpts.cRay + '=' + compressedCtx;
+
+        let getChallengeResponse = await this.httpClient.post(getChallengeUrl, {
+            headers: {
+                'Content-type': 'application/x-www-form-urlencoded',
+                'CF-Challenge': this.ChlOpts.cHash
+            },
+            body: payload
+        });
+        let firstChallengeScript = CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay);
+
+
+
         return {
             error: false,
-            cfClearance: CloudflareUtils.getCookie(this.cookieJar, this.baseUrl, 'cf_clearance'),
-            cfDuid: CloudflareUtils.getCookie(this.cookieJar, this.baseUrl, '__cfduid')
+            cfClearance: compressedCtx
+            //cfClearance: CloudflareUtils.getCookie(this.cookieJar, this.baseUrl, 'cf_clearance'),
+            //cfDuid: CloudflareUtils.getCookie(this.cookieJar, this.baseUrl, '__cfduid')
         }
     }
 }
