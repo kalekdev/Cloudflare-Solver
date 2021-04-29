@@ -81,7 +81,7 @@ export default class CloudflareSolver {
         this.cookieJar.setCookieSync('cf_chl_prog=e', this.baseUrl);
         let getChallengeUrl = `${this.baseUrl}/cdn-cgi/challenge-platform/h/g/flow/ov1${this.GetChallengePath}${this.ChlOpts.cRay}/${this.ChlOpts.cHash}`;
 
-        let compressedCtx = CloudflareUtils.lzCompress(JSON.stringify(this.ChlCtx), this.LzAlphabet).replace('+', '%2b');
+        let compressedCtx = CloudflareUtils.compressToEncodedURIComponent(JSON.stringify(this.ChlCtx), this.LzAlphabet).replace('+', '%2b');
         let payload = 'v_' + this.ChlOpts.cRay + '=' + compressedCtx;
 
         let getChallengeResponse = await this.httpClient.post(getChallengeUrl, {
