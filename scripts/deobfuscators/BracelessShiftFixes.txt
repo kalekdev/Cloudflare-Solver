@@ -1,0 +1,26 @@
+node_modules\@jsoverson\shift-codegen\dist\formatted-codegen.js
+	reduceSimpleBlockStatement
+
+node_modules\estraverse\estraverse.js
+	Syntax = {
+        VisitorKeys = {
+
+node_modules\shift-ast\dist\index.d.ts
+	export type Statement = 
+	export class SimpleBlockStatement
+	var SimpleBlockStatement = exports.SimpleBlockStatement = function SimpleBlockStatement(_ref16) {
+
+node_modules\shift-codegen\dist\formatted-codegen.js
+	  key: 'reduceSimpleBlockStatement',
+
+node_modules\shift-codegen\dist\minimal-codegen.js
+	    key: 'reduceSimpleBlockStatement',
+
+node_modules\shift-reducer\dist\director.js
+	SimpleBlockStatement:function Block(reducer, node) {
+
+node_modules\shift-spec\dist\index.js
+	var TYPE_INDICATOR = {
+	var SimpleBlockStatement = SPEC.SimpleBlockStatement = {};
+	var Statement = Union(BlockStatement, SimpleBlockStatement
+	impleBlockStatement.typeName = "SimpleBlockStatement";

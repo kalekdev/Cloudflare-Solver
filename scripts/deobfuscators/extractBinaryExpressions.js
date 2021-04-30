@@ -63,19 +63,99 @@ function isCommaBinaryExpression(node) {
     return node && (node.type == "BinaryExpression") && (node.operator == ",")
 };
 
+
+let statementsToExpandAsBlock = ["IfStatement",  "ForStatement", "WhileStatement", "DoWhileStatement"]
+
+
+// ######  STEP 1, Tranforming ','
+
+//a=(b>c)?(d,e):(f,g) ->
+// if(b > c)
+//  a = (d,e);
+// else
+//  b = (f,g);
+
+//ConditionalExpression
+$script("ExpressionStatement").filter(node =>
+    {
+        return $script(node).query("ExpressionStatement > AssignmentExpression > ConditionalExpression > BinaryExpression[operator = ',']").nodes.length > 0;        
+    }).replace(node => 
+    {
+        let assign = node.expression;
+        let condExpr = assign.expression;
+
+        return new IfStatement({
+            type: "IfStatement",
+            test: condExpr.test,
+            consequent:new ExpressionStatement({
+                expression: new AssignmentExpression({
+                    binding: assign.binding,
+                    expression: condExpr.consequent
+                })
+            }),
+            alternate:new ExpressionStatement({
+                expression: new AssignmentExpression({
+                    binding: assign.binding,
+                    expression: condExpr.alternate
+                })
+            })
+        });
+});
+
+//(b>c)?(d,e):(f,g) ->
+// if(b > c)
+//  (d,e);
+// else
+//  (f,g);
+
+$script("ExpressionStatement").filter(node =>
+    {
+        return $script(node).query("ExpressionStatement > ConditionalExpression > BinaryExpression[operator = ',']").nodes.length > 0;        
+    }).replace(node => 
+    {
+        let condExpr = node.expression;
+
+        return new IfStatement({
+            type: "IfStatement",
+            test: condExpr.test,
+            consequent: new ExpressionStatement({
+                expression: condExpr.consequent
+            }),
+            alternate:new ExpressionStatement({
+                expression: condExpr.alternate
+            })
+        });
+});
+
+
 //fast if
 $script("IfStatement[test.type = 'BinaryExpression'][test.operator = ',']").replace(node => {
     // Skipped these scenarios: if ((A,B)>C)
     // requires a deep lookup as test will always contain a non "," BinaryExpression at the top layer.
 
+    let parent = $script(node).parents().nodes[0];
     let innerExpression = node.test;
     node.test = innerExpression.right;
 
-    return new Shift.Block({
-        statements: [new Shift.ExpressionStatement({
-            expression: innerExpression.left
-        }), node]
-    });
+    let initObj = {
+        statements: [
+            new Shift.ExpressionStatement({
+                expression: innerExpression.left
+            }),
+            node
+        ]
+    };
+
+    let resultNode;
+
+    if(statementsToExpandAsBlock.indexOf(parent.type) < 0)
+        resultNode = new Shift.SimpleBlockStatement(initObj);
+    else
+        resultNode = new Shift.BlockStatement({
+            block: new Shift.Block(initObj)
+        });
+
+    return resultNode;
 });
 
 //deep if
@@ -98,7 +178,7 @@ $script("SwitchStatementWithDefault[discriminant.type = 'BinaryExpression'][disc
     let innerExpression = node.discriminant;
     node.discriminant = innerExpression.right;
 
-    return new Shift.Block({
+    return new Shift.SimpleBlockStatement({
         statements: [new Shift.ExpressionStatement({
             expression: innerExpression.left
         }),
@@ -173,18 +253,30 @@ $script("ForStatement[test.type = 'BinaryExpression'][test.operator = ','], Whil
 });
 
 $script("ForStatement[init.type = 'BinaryExpression'][init.operator = ',']").replace(node => {
+    let parent = $script(node).parents().nodes[0];
     let initExpression = node.init;
 
     node.init = initExpression.right;
 
-    return new Shift.Block({
+    let initObj = {
         statements: [
             new Shift.ExpressionStatement({
                 expression: initExpression.left
             }),
             node
         ]
-    });
+    };
+
+    let resultNode;
+
+    if(statementsToExpandAsBlock.indexOf(parent.type) < 0)
+        resultNode = new Shift.SimpleBlockStatement(initObj);
+    else
+        resultNode = new Shift.BlockStatement({
+            block: new Shift.Block(initObj)
+        });
+
+    return resultNode;
 });
 
 $script("ForStatement[update.type = 'BinaryExpression'][update.operator = ',']").replace(node => {
@@ -214,7 +306,7 @@ $script("ForStatement[update.type = 'BinaryExpression'][update.operator = ',']")
 }).forEach(node => console.log(node));*/
 
 $script("ReturnStatement[expression.type = 'BinaryExpression'][expression.operator = ',']").replace(node => {
-    return new Shift.Block({
+    return new Shift.SimpleBlockStatement({
         statements: [
             new Shift.ExpressionStatement({
                 expression: node.expression.left
@@ -244,10 +336,11 @@ $script("VariableDeclarationStatement").filter(node => {
     });
     statementsArray.push(node);
 
-    return new Shift.Block({
+    return new Shift.SimpleBlockStatement({
         statements: statementsArray
     });
 })
+
 
 
 let outputSt1 = beautify($script.codegen().toString());
@@ -262,7 +355,7 @@ while (keepLooping) {
     let nonSkipped = false;
 
     keepLooping = $script("BinaryExpression[operator = ',']").replace(expression => {
-        let parent = $script(expression).parents().nodes[0]
+        let parent = $script(expression).parents().nodes[0];
         
         switch(parent.type)
         {
@@ -274,78 +367,7 @@ while (keepLooping) {
         {
             console.log(parent.type);
             types.push(parent.type);
-
-            switch(parent.type)
-            {
-                case 'ConditionalExpression':
-                case 'SwitchStatement':
-                case 'SwitchStatementWithDefault':
-                case 'IfStatement':
-                case 'ForStatement':
-                case 'BinaryExpression':
-                    /*console.log(codegen(parent));
-                    console.log("         -");
-                    console.log("         -");*/
-                    break;
-            }
         }
-
-        /*
-
-        let skipCurrent = false;
-        let pNode = parent;
-
-        
-        //looking that all expression up to statement consist only from brokeable `,` expressions
-        while(((pNode.type.indexOf("Statement") < 0) || pNode.type == "Block") && !skipCurrent)
-        {
-            switch(pNode.type )
-            {
-                case 'BinaryExpression':
-                    switch(pNode.operator)
-                    {
-                        case "&&":
-                        case "||":
-                            skipCurrent = true;
-                            break;
-                    }
-                    break;
-
-                case 'Block':
-                    break;
-
-                default:      
-                    skipCurrent = true;
-            }
-            
-
-            /*if(skipCurrent)
-            {
-                console.log('Skipping BinaryExpression')
-                console.log("       Current: " + codegen(expression))
-                console.log("       Parent view: " + codegen(pNode))
-            }* /
-
-            pNode = $script(pNode).parents().nodes[0];
-        }
-        
-        if(skipCurrent)
-            return expression;
-        
-
-        /*if(parent.type == 'BinaryExpression')
-        {
-            if(parent.operator!= ',')
-            {
-                console.log("         +");
-                console.log("         +");
-                console.log(codegen(parent));
-                console.log("         +");
-                console.log("         +");
-            }
-        }* /
-
- */
 
         if((parent.type.indexOf("Statement") < 0) && (parent.type != "Block"))
             return expression;
@@ -353,7 +375,7 @@ while (keepLooping) {
         
         nonSkipped = true;
 
-        return new Shift.Block({
+        return new Shift.SimpleBlockStatement({
             __cf_ID: i++,
             statements: [
                 new Shift.ExpressionStatement({
