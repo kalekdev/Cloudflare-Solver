@@ -1,6 +1,5 @@
 import {CookieJar} from "tough-cookie";
-// To allow access to private functions
-const lz = require('lz-string');
+const LzString = require('lz-string');
 
 export default class CloudflareUtils {
     static extractChlOps(page: string): {} {
@@ -17,12 +16,6 @@ export default class CloudflareUtils {
 
     static getCookie(jar: CookieJar, url: string, name:  string): string {
         return jar.getCookiesSync(url).find(cookie => cookie.key == name)!.value
-    }
-
-    static lzCompress(data: string, alphabet: string): string {
-        return lz._compress(data, 6, function (a: any) {
-            return alphabet.charAt(a)
-        })
     }
 
     static decodeChallenge(data: string, cRay: string): string {
@@ -44,5 +37,11 @@ export default class CloudflareUtils {
         z = [];
         for (A = v = -1; !isNaN(v = u["charCodeAt"](++A)); z["push"](String["fromCharCode"](w["dLYaj"](w["utvqb"](v & 255, x) - A + 65535, 255))));
         return z["join"]("");
+    }
+
+    static compressToEncodedURIComponent(data, alphabet): string {
+        return LzString._compress(data, 6, function (x) {
+            return alphabet.charAt(x);
+        });
     }
 }
