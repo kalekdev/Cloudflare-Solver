@@ -8,6 +8,8 @@ node_modules\estraverse\estraverse.js
 node_modules\shift-ast\dist\index.d.ts
 	export type Statement = 
 	export class SimpleBlockStatement
+
+node_modules\shift-ast\dist\index.js
 	var SimpleBlockStatement = exports.SimpleBlockStatement = function SimpleBlockStatement(_ref16) {
 
 node_modules\shift-codegen\dist\formatted-codegen.js
