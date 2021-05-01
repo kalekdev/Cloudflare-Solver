@@ -408,9 +408,14 @@ $script("AssignmentExpression[binding.expression.value.length = 5]")
                     // v[c('0x191')] = function (x, y) {
                     //      return x(y)
                     // }
+                    // v[c('0x191')](A,B) to:
+                    // A(B)
+                    
                     return new Shift.CallExpression({
-                        callee: node.expression.body.statements[0].expression.callee,
-                        arguments: proxyCall.arguments
+                        callee: proxyCall.arguments[0],
+                        arguments: [
+                            proxyCall.arguments[1]
+                        ]
                     })
                 }
 
