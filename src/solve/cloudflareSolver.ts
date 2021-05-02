@@ -47,7 +47,8 @@ export default class CloudflareSolver {
         const $script = refactor(scriptResponse.body);
         // @ts-ignore
         let stringArray = $script('StaticMemberExpression[object.type = "LiteralStringExpression"]').nodes[0].object.value.split(',');
-        this.LzAlphabet = stringArray.find((s: string) => s.length == 65 && !s.includes('$'));
+        this.LzAlphabet = stringArray.find((s: string) => s.length == 65 && s.includes('$'));
+        console.log(this.LzAlphabet);
         this.GetChallengePath = String(scriptResponse.body.match(/\/[.|0-9]*:\d{10}:.{64}\//));
 
         this.ChlCtx = {

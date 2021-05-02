@@ -579,7 +579,7 @@ fs.writeFileSync('../deobfuscated/deobJsch.preFinal.js', preFinishedOutput);
 const $scriptPreFinal = refactor(preFinishedOutput);
 
 
-$scriptPreFinal("Block > EmptyStatement").delete();
+$scriptPreFinal("Block > EmptyStatement, FunctionBody > EmptyStatement, SwitchCase > EmptyStatement").delete();
 
 // Create output and write to file
 let output = beautify($scriptPreFinal.codegen().toString());
