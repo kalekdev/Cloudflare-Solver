@@ -91,7 +91,10 @@ export default class CloudflareSolver {
             },
             body: payload
         });
+
+        if (getChallengeResponse.statusCode != 200) throw new Error('Error GETing first challenge.');
         let firstChallengeScript = CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay);
+
 
 
 

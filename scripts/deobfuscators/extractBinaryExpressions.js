@@ -8,6 +8,8 @@ const Shift = require('shift-ast');
 const beautify = require('js-beautify');
 const fs = require('fs');
 
+const OUTPUT_STEPS = false;
+
 // Read file and create refactor session
 let source = fs.readFileSync('../obfuscated/jsch.js', 'utf-8');
 const $script = refactor(source);
@@ -59,20 +61,20 @@ $script(`CallExpression[callee.name = "${arrayIndexingFunctionName}"]`).replace(
     });
 });
 
+
 function isCommaBinaryExpression(node) {
     return node && (node.type == "BinaryExpression") && (node.operator == ",")
-};
-
+}
 
 let statementsToExpandAsBlock = ["IfStatement",  "ForStatement", "WhileStatement", "DoWhileStatement"]
 
-let hadTransforms = false;
-let transfIter = 0;
+let isTransformed = false;
+let transformationCounter = 0;
 
 do
 {
-    hadTransforms = false;
-    // ######  STEP 1, Tranforming ','
+    isTransformed = false;
+    // ######  STEP 1, Transforming ','
 
     //a=(b>c)?(d,e):(f,g) ->
     // if(b > c)
@@ -80,30 +82,30 @@ do
     // else
     //  b = (f,g);
 
-    //ConditionalExpression
+    // ConditionalExpression
     $script("ExpressionStatement").filter(node =>
         {
-            let childs = $script(node).query("ExpressionStatement > AssignmentExpression > ConditionalExpression > BinaryExpression[operator = ',']").nodes;
-            return (childs.length == 1) && ($script($script(childs[0]).parents().nodes[0]).parents().nodes[0] == node);          
+            let children = $script(node).query("ExpressionStatement > AssignmentExpression > ConditionalExpression > BinaryExpression[operator = ',']").nodes;
+            return (children.length === 1) && ($script($script(children[0]).parents().nodes[0]).parents().nodes[0] == node);
         }).replace(node => 
         {
-            let assign = node.expression;
-            let condExpr = assign.expression;
+            let assignment = node.expression;
+            let condExpr = assignment.expression;
 
-            hadTransforms = true;
+            isTransformed = true;
 
             return new IfStatement({
                 type: "IfStatement",
                 test: condExpr.test,
-                consequent:new ExpressionStatement({
+                consequent: new ExpressionStatement({
                     expression: new AssignmentExpression({
-                        binding: assign.binding,
+                        binding: assignment.binding,
                         expression: condExpr.consequent
                     })
                 }),
-                alternate:new ExpressionStatement({
+                alternate: new ExpressionStatement({
                     expression: new AssignmentExpression({
-                        binding: assign.binding,
+                        binding: assignment.binding,
                         expression: condExpr.alternate
                     })
                 })
@@ -123,7 +125,7 @@ do
         }).replace(node => 
         {
             let condExpr = node.expression;
-            hadTransforms = true;
+            isTransformed = true;
 
             return new Shift.IfStatement({
                 test: condExpr.test,
@@ -151,7 +153,7 @@ do
     });
 
 
-    //fast if
+    // fast if
     $script("IfStatement[test.type = 'BinaryExpression'][test.operator = ',']").replace(node => {
         // Skipped these scenarios: if ((A,B)>C)
         // requires a deep lookup as test will always contain a non "," BinaryExpression at the top layer.
@@ -178,7 +180,7 @@ do
                 block: new Shift.Block(initObj)
             });
 
-        hadTransforms = true;
+        isTransformed = true;
         return resultNode;
     });
 
@@ -202,7 +204,7 @@ do
         let innerExpression = node.discriminant;
         node.discriminant = innerExpression.right;
 
-        hadTransforms = true;
+        isTransformed = true;
         return new Shift.SimpleBlockStatement({
             statements: [new Shift.ExpressionStatement({
                 expression: innerExpression.left
@@ -272,7 +274,7 @@ do
             })
         }));
 
-        hadTransforms = true;
+        isTransformed = true;
         return new Shift.Block({
             statements: statementsArray
         });
@@ -302,7 +304,7 @@ do
                 block: new Shift.Block(initObj)
             });
 
-        hadTransforms = true;
+        isTransformed = true;
         return resultNode;
     });
 
@@ -319,7 +321,7 @@ do
             ]
         });
 
-        hadTransforms = true;
+        isTransformed = true;
         return node;
     });
 
@@ -334,7 +336,7 @@ do
     }).forEach(node => console.log(node));*/
 
     $script("ReturnStatement[expression.type = 'BinaryExpression'][expression.operator = ',']").replace(node => {
-        hadTransforms = true;
+        isTransformed = true;
         return new Shift.SimpleBlockStatement({
             statements: [
                 new Shift.ExpressionStatement({
@@ -365,7 +367,7 @@ do
         });
         statementsArray.push(node);
 
-        hadTransforms = true;
+        isTransformed = true;
         return new Shift.SimpleBlockStatement({
             statements: statementsArray
         });
@@ -373,8 +375,10 @@ do
 
 
 
-    let outputSt1 = beautify($script.codegen().toString());
-    fs.writeFileSync('../deobfuscated/step1.i' + transfIter.toString() + '.deobf.js', outputSt1);
+    if (OUTPUT_STEPS) {
+        let outputSt1 = beautify($script.codegen().toString());
+        fs.writeFileSync('../deobfuscated/step1.i' + transformationCounter.toString() + '.deobf.js', outputSt1);
+    }
 
     let types =[];
 
@@ -404,7 +408,7 @@ do
             
             
             nonSkipped = true;
-            hadTransforms = true;
+            isTransformed = true;
 
             return new Shift.SimpleBlockStatement({
                 __cf_ID: i++,
@@ -442,7 +446,7 @@ do
                         // v[c('0x191')](A,B) to:
                         // A(B)
                         
-                        hadTransforms = true;
+                        isTransformed = true;
                         return new Shift.CallExpression({
                             callee: proxyCall.arguments[0],
                             arguments: [
@@ -455,7 +459,7 @@ do
                     // v[c('0x90')] = function (z, A) {
                     //      return z < A
                     // }
-                    hadTransforms = true;
+                    isTransformed = true;
                     return new Shift.BinaryExpression({
                         operator: node.expression.body.statements[0].expression.operator,
                         left: proxyCall.arguments[0],
@@ -464,10 +468,14 @@ do
                 });
         });
 
-    let output = beautify($script.codegen().toString());
-    fs.writeFileSync('../deobfuscated/deobJsch.i' + transfIter.toString() + '.js', output);
+    if (OUTPUT_STEPS) {
+        let output = beautify($script.codegen().toString());
+        fs.writeFileSync('../deobfuscated/deobJsch.i' + transformationCounter.toString() + '.js', output);
+    }
 
-    transfIter++;
-} while (hadTransforms);
+    transformationCounter++;
+} while (isTransformed);
 
 // Create output and write to file
+let output = beautify($script.codegen().toString());
+fs.writeFileSync('../deobfuscated/deobJsch.js', output);
