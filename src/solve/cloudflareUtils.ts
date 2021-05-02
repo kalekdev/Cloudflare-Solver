@@ -1,5 +1,4 @@
 import {CookieJar} from "tough-cookie";
-const LzString = require('lz-string');
 
 export default class CloudflareUtils {
     static extractChlOps(page: string): {} {
@@ -39,9 +38,201 @@ export default class CloudflareUtils {
         return z["join"]("");
     }
 
-    static compressToEncodedURIComponent(data, alphabet): string {
-        return LzString._compress(data, 6, function (x) {
-            return alphabet.charAt(x);
-        });
+    static compressToEncodedURIComponent(uncompressed, alphabet): string {
+        function getCharFromInt(F) {
+            return alphabet.charAt(F);
+        }
+
+        if (null == uncompressed) return "";
+        let bitsPerChar = 6;
+        var i, context_dictionary, context_dictionaryToCreate, context_w , context_enlargeIn, O, context_numBits , context_data, context_data_val , context_data_position , ii;
+        context_dictionary = {};
+        context_dictionaryToCreate = {};;
+        context_w  = "";
+        context_enlargeIn = 2;
+        let context_dictSize = 3;
+        context_numBits  = 2;
+        context_data = [];
+        context_data_val  = 0;
+        context_data_position  = 0;
+        for (ii = 0; ii < uncompressed["length"]; ii += 1)
+             var context_c, context_wc;
+        context_c = uncompressed.charAt(ii);
+        Object.prototype.hasOwnProperty.call(context_dictionary, context_c) || (context_dictionary[context_c] = O++, context_dictionaryToCreate[context_c] = !0);;
+        context_wc  = context_w  + context_c;
+        if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc )) context_w  = context_wc ;
+        else {
+            if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w )) {
+                if (256 > context_w.charCodeAt(0)) {
+                    for (i = 0; i < context_numBits;i++) {
+                        context_data_val <<= 1;
+                        if (context_data_position  == bitsPerChar - 1) {
+                            context_data_position  = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val  = 0;
+                        } else {
+                            context_data_position++;
+                        }
+                    }
+                    var value ;
+                    value  = context_w.charCodeAt(0);
+                    for (i = 0; 8 > i;i++) {
+                        context_data_val  = context_data_val  << 1 | value  & 1;
+                        if (context_data_position  == bitsPerChar - 1) {
+                            context_data_position  = 0;
+                            context_data.push(getCharFromInt(context_data_val ));
+                            context_data_val  = 0;
+                        } else {
+                            context_data_position ++;
+                        }
+                        value  >>= 1;
+                    }
+                } else {
+                    value  = 1;
+                    for (i = 0; i < context_numBits;i++) {
+                        ;
+                        context_data_val  = context_data_val  << 1 | value ;
+                        if (context_data_position  == bitsPerChar - 1) {
+                            context_data_position  = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val  = 0;
+                        } else {
+                            context_data_position ++;
+                        }
+                        value  = 0;
+                    }
+                    value  = context_w.charCodeAt(0);
+                    for (i = 0; 16 > i;i++) {
+                        context_data_val  = context_data_val  << 1 | value  & 1;
+                        if (context_data_position == bitsPerChar - 1) {
+                            context_data_position  = 0;
+                            context_data.push(getCharFromInt(context_data_val ));
+                            context_data_val  = 0;
+                        } else {
+                            context_data_position++;
+                        }
+                        value  >>= 1;
+                    }
+                }
+                context_enlargeIn--;
+                if (context_enlargeIn == 0) {
+                    context_enlargeIn = Math.pow(2, context_numBits);
+                    context_numBits++;
+                }
+                delete context_dictionaryToCreate[context_w ];;
+            } else {
+                value  = context_dictionary[context_w ];
+                for (i = 0; i < context_numBits ; i++) context_data_val  = context_data_val  << 1 | value  & 1;
+                if (context_data_position  == bitsPerChar - 1) {
+                    context_data_position  = 0;
+                    context_data.push(getCharFromInt(context_data_val ));
+                    context_data_val  = 0;
+                } else {
+                    context_data_position ++;
+                }
+                value  >>= 1;
+            }
+            context_enlargeIn--;
+            if (0 == context_enlargeIn) {
+                context_enlargeIn = Math.pow(2, context_numBits);
+                context_numBits ++;
+            }
+            context_dictionary[context_wc] = O++;
+            context_w  = String(context_c);
+        }
+        if ("" !== context_w ) {
+            if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w )) {
+                if (256 > context_w.charCodeAt(0)) {
+                    for (i = 0; i < context_numBits;i++) {
+                        ;
+                        context_data_val  <<= 1;
+                        if (context_data_position  == bitsPerChar - 1) {
+                            context_data_position  = 0;
+                            context_data.push(getCharFromInt(context_data_val ));
+                            context_data_val  = 0;
+                        } else {
+                            context_data_position ++;
+                        }
+                    }
+                    value  = context_w .charCodeAt(0);
+                    for (i = 0; 8 > i;i++) {
+                        context_data_val  = context_data_val  << 1 | value  & 1;
+                        if (context_data_position  == bitsPerChar - 1) {
+                            context_data_position  = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val  = 0;
+                        } else {
+                            context_data_position ++;
+                        }
+                        value  >>= 1;
+                    }
+                } else {
+                    value  = 1;
+                    for (i = 0; i < context_numBits;i++) {
+                        ;
+                        context_data_val  = context_data_val  << 1 | value ;
+                        if (context_data_position  == bitsPerChar - 1) {
+                            context_data_position  = 0;
+                            context_data.push(getCharFromInt(context_data_val ));
+                            context_data_val  = 0;
+                        } else {
+                            context_data_position ++;
+                        }
+                        value  = 0;
+                    }
+                    value  = context_w.charCodeAt(0);
+                    for (i = 0; 16 > i;i++) {
+                        context_data_val  = context_data_val  << 1 | value  & 1;
+                        if (context_data_position  == bitsPerChar - 1) {
+                            context_data_position  = 0;
+                            context_data.push(getCharFromInt(context_data_val ));
+                            context_data_val  = 0;
+                        } else {
+                            context_data_position ++;
+                        }
+                        value  >>= 1;
+                    }
+                }
+                context_enlargeIn--;
+                if (0 == context_enlargeIn) {
+                    context_enlargeIn = Math.pow(2, context_numBits );
+                    context_numBits++;
+                }
+                delete context_dictionaryToCreate[context_w ];;
+            } else {
+                value  = context_dictionary[context_w ];
+                for (i = 0; i < context_numBits ; i++) context_data_val  = context_data_val  << 1 | value  & 1;
+                if (context_data_position  == bitsPerChar - 1) {
+                    context_data_position  = 0;
+                    context_data.push(getCharFromInt(context_data_val ));
+                    context_data_val  = 0;
+                } else {
+                    context_data_position ++;
+                };
+                value  >>= 1;
+            }
+            context_enlargeIn--;
+            0 == context_enlargeIn && context_numBits++;
+        }
+        value  = 2;
+        for (i = 0; i < context_numBits; i++) {
+            context_data_val = context_data_val  << 1 | value  & 1;
+            if (context_data_position  == bitsPerChar - 1) {
+                context_data_position  = 0;
+                context_data.push(getCharFromInt(context_data_val ));
+                context_data_val  = 0;
+            } else {
+                context_data_position ++;
+            }
+            value  >>= 1;
+        }
+        for (;;) {
+            context_data_val  <<= 1;
+            if (context_data_position  == bitsPerChar - 1) {
+                context_data.push(getCharFromInt(context_data_val ));
+                break;
+            } else context_data_position ++;
+        }
+        return context_data.join("");
     }
 }

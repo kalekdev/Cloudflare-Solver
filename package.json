@@ -12,7 +12,6 @@
     "got": "^11.8.2",
     "hpagent": "^0.1.1",
     "jsdom": "^16.5.3",
-    "lz-string": "^1.4.4",
     "shift-refactor": "^2.0.0",
     "tough-cookie": "^4.0.0",
     "tunnel": "0.0.6"
