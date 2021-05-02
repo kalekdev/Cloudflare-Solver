@@ -67,6 +67,19 @@ function isCommaBinaryExpression(node) {
 }
 
 let statementsToExpandAsBlock = ["IfStatement",  "ForStatement", "WhileStatement", "DoWhileStatement"]
+let comparisonOperators = ["<", ">", "==", "===", "!=", "!===", ">=", "<="];
+let compOpsLtr         = [">", ">=", "==", "===", "!=", "!==="];
+let compOpsLtrOpposite = ["<", "<=", "==", "===", "!=", "!==="];
+let equalityOps = ["==", "===", "!=", "!==="];
+let compOpsRtl         = [">", ">="];
+let compOpsRtlOpposite = ["<", "<="];
+let wellKnownLiterals = ["prototype", "hasOwnProperty", "call", "push", "length", "timeout", 
+                         "charCodeAt", "charAt", "pow", "shift", "JSON", "Date", "setTime", "getTime",
+                         "test", "toUTCString", "valueOf", "replace", "toJSON", "toString", "join",
+                         "getUTCFullYear", "getUTCMonth", "getUTCDate", "getUTCHours", "getUTCMinutes",
+                         "getUTCSeconds", "stringify", "document", "slice", "fromCharCode", "createElement",
+                         "getElementById", "console", "log", "indexOf", "cookie", "style", "setTimeout",
+                         "compressToEncodedURIComponent"]
 
 let isTransformed = false;
 let transformationCounter = 0;
@@ -199,7 +212,6 @@ do
         });
     });*/
 
-
     $script("SwitchStatementWithDefault[discriminant.type = 'BinaryExpression'][discriminant.operator = ','], SwitchStatement[discriminant.type = 'BinaryExpression'][discriminant.operator = ',']").replace(node => {
         let innerExpression = node.discriminant;
         node.discriminant = innerExpression.right;
@@ -320,6 +332,43 @@ do
                 }),
             ]
         });
+
+        isTransformed = true;
+        return node;
+    });
+
+    
+    // bounds transforms checking:
+    // LTR - Left to right
+    // from:
+    //      if (255 > A)
+    // to:
+    //      if (A < 255)
+    $script("BinaryExpression").filter(node=>{
+        return (compOpsLtr.indexOf(node.operator) > -1) && (node.left.type.indexOf("Literal") == 0) && !((equalityOps.indexOf(node.operator) > -1) && (node.right.type.indexOf("Literal") == 0));
+    }).replace(node => {
+        let prevRight = node.right;
+        node.right = node.left;
+        node.left = prevRight;
+        node.operator = compOpsLtrOpposite[compOpsLtr.indexOf(node.operator)];
+
+        isTransformed = true;
+        return node;
+    });
+    
+    // bounds transforms checking:
+    // RTL - Right to left
+    // from:
+    //      if (A > 255)
+    // to:
+    //      if (255 < A)
+    $script("BinaryExpression").filter(node=>{
+        return (compOpsRtl.indexOf(node.operator) > -1) && (node.right.type.indexOf("Literal") == 0);
+    }).replace(node => {
+        let prevRight = node.right;
+        node.right = node.left;
+        node.left = prevRight;
+        node.operator = compOpsRtlOpposite[compOpsRtl.indexOf(node.operator)];
 
         isTransformed = true;
         return node;
@@ -468,6 +517,54 @@ do
                 });
         });
 
+    $script("ExpressionStatement[expression.type='BinaryExpression'][expression.operator='&&']").replace(node => {
+        isTransformed = true;
+        return new Shift.IfStatement({
+            test: node.expression.left,
+            consequent: new Shift.BlockStatement({
+                block: new Shift.Block({
+                    statements:[
+                        new Shift.ExpressionStatement({
+                                expression: node.expression.right
+                            })
+                        ]
+                    })
+                }),
+            alternate: null
+        });
+    });
+
+    $script("ExpressionStatement[expression.type='BinaryExpression'][expression.operator='||']").replace(node => {
+        isTransformed = true;
+        return new Shift.IfStatement({
+            test: new Shift.UnaryExpression({
+                operator: "!",
+                operand: node.expression.left
+            }),
+            consequent: new Shift.BlockStatement({
+                block: new Shift.Block({
+                    statements:[
+                        new Shift.ExpressionStatement({
+                                expression: node.expression.right
+                            })
+                        ]
+                    })
+                }),
+            alternate: null
+        });
+    });
+
+    $script("ComputedMemberExpression[expression.type='LiteralStringExpression']").filter(node=>{
+        return wellKnownLiterals.indexOf(node.expression.value) > -1;
+    })
+    .replace(node => {
+        isTransformed = true;
+        return new Shift.StaticMemberExpression({
+            property: node.expression.value,
+            object: node.object
+        });
+    })
+
     if (OUTPUT_STEPS) {
         let output = beautify($script.codegen().toString());
         fs.writeFileSync('../deobfuscated/deobJsch.i' + transformationCounter.toString() + '.js', output);
@@ -476,6 +573,14 @@ do
     transformationCounter++;
 } while (isTransformed);
 
+
+let preFinishedOutput = beautify($script.codegen().toString());
+fs.writeFileSync('../deobfuscated/deobJsch.preFinal.js', preFinishedOutput);
+const $scriptPreFinal = refactor(preFinishedOutput);
+
+
+$scriptPreFinal("Block > EmptyStatement").delete();
+
 // Create output and write to file
-let output = beautify($script.codegen().toString());
+let output = beautify($scriptPreFinal.codegen().toString());
 fs.writeFileSync('../deobfuscated/deobJsch.js', output);
