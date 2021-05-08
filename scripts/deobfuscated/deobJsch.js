@@ -507,9 +507,8 @@
                 if (!o[p]) {
                     var D;
                     z[A] = {};
-                    for (D = 0; D < B.length;) {
+                    for (D = 0; D < B.length; D++) {
                         C[D][E.charAt(D)] = D;
-                        D++;
                     }
                 }
                 return w[x][y];
@@ -809,9 +808,8 @@
         }(v);
         return function(A, C, B) {
             B = "";
-            for (C = 0; C < 4 * A.length;) {
+            for (C = 0; C < 4 * A.length; C++) {
                 B += "0123456789abcdef".charAt(A[C >> 2] >> 8 * (3 - C % 4) + 4 & 15) + x["GxKZn"].charAt(A[C >> 2] >> 8 * (3 - C % 4) & 15);
-                C++;
             }
             return B;
         }(function(A, B, G, F, E, D, C) {
@@ -1424,9 +1422,8 @@
             if (!B[E]) {
                 var G;
                 B[E] = {};
-                for (G = 0; G < E.length;) {
+                for (G = 0; G < E.length; G++) {
                     B[E][E.charAt(G)] = G;
-                    G++;
                 }
             }
             return B[E][F];
@@ -1632,9 +1629,8 @@
                                 var I, J, K;
                                 I = Array(E.length / 2);
                                 J = 0;
-                                for (K = I.length; J < K;) {
+                                for (K = I.length; J < K; J++) {
                                     I[J] = 256 * E[2 * J] + E[2 * J + 1];
-                                    J++;
                                 }
                                 continue;
                         }
@@ -1710,7 +1706,7 @@
                             else {
                                 if (Object.prototype.hasOwnProperty.call(L, M)) {
                                     if (M.charCodeAt(0) < 256) {
-                                        for (J = 0; J < P;) {
+                                        for (J = 0; J < P; J++) {
                                             R <<= 1;
                                             if (S == F - 1) {
                                                 S = 0;
@@ -1719,11 +1715,10 @@
                                             } else {
                                                 S++;
                                             }
-                                            J++;
                                         }
                                         var W;
                                         W = M.charCodeAt(0);
-                                        for (J = 0; J < 8;) {
+                                        for (J = 0; J < 8; J++) {
                                             R = R << 1 | W & 1;
                                             if (S == F - 1) {
                                                 S = 0;
@@ -1733,11 +1728,10 @@
                                                 S++;
                                             }
                                             W >>= 1;
-                                            J++;
                                         }
                                     } else {
                                         W = 1;
-                                        for (J = 0; J < P;) {
+                                        for (J = 0; J < P; J++) {
                                             R = R << 1 | W;
                                             if (S == F - 1) {
                                                 S = 0;
@@ -1747,10 +1741,9 @@
                                                 S++;
                                             }
                                             W = 0;
-                                            J++;
                                         }
                                         W = M.charCodeAt(0);
-                                        for (J = 0; J < 16;) {
+                                        for (J = 0; J < 16; J++) {
                                             R = R << 1 | W & 1;
                                             if (S == F - 1) {
                                                 S = 0;
@@ -1760,7 +1753,6 @@
                                                 S++;
                                             }
                                             W >>= 1;
-                                            J++;
                                         }
                                     }
                                     N--;
@@ -1793,7 +1785,7 @@
                             }
                         } else var Y = function Y() {
                             L = 1;
-                            for (M = 0; N < O;) {
+                            for (M = 0; N < O; P++) {
                                 Q = R << 1 | S;
                                 if (T == U - 1) {
                                     V = 0;
@@ -1803,10 +1795,9 @@
                                     a0++;
                                 }
                                 a1 = 0;
-                                P++;
                             }
                             a2 = a3.charCodeAt(0);
-                            for (a4 = 0; a5 < 16;) {
+                            for (a4 = 0; a5 < 16; a6++) {
                                 a7 = a8 << 1 | a9 & 1;
                                 if (aa == ab - 1) {
                                     ac = 0;
@@ -1816,7 +1807,6 @@
                                     ah++;
                                 }
                                 ai >>= 1;
-                                a6++;
                             }
                         };
                     if ("" !== M) {
@@ -1829,7 +1819,7 @@
                                     K[2 * o + 1] = a0 % 256;
                                 };
                                 else {
-                                    for (J = 0; J < P;) {
+                                    for (J = 0; J < P; J++) {
                                         R <<= 1;
                                         if (S == F - 1) {
                                             S = 0;
@@ -1838,10 +1828,9 @@
                                         } else {
                                             S++;
                                         }
-                                        J++;
                                     }
                                     W = M.charCodeAt(0);
-                                    for (J = 0; J < 8;) {
+                                    for (J = 0; J < 8; J++) {
                                         R = R << 1 | W & 1;
                                         if (S == F - 1) {
                                             S = 0;
@@ -1851,12 +1840,11 @@
                                             S++;
                                         }
                                         W >>= 1;
-                                        J++;
                                     }
                                 }
                             } else {
                                 W = 1;
-                                for (J = 0; J < P;) {
+                                for (J = 0; J < P; J++) {
                                     R = R << 1 | W;
                                     if (S == F - 1) {
                                         S = 0;
@@ -1866,10 +1854,9 @@
                                         S++;
                                     }
                                     W = 0;
-                                    J++;
                                 }
                                 W = M.charCodeAt(0);
-                                for (J = 0; J < 16;) {
+                                for (J = 0; J < 16; J++) {
                                     R = R << 1 | W & 1;
                                     if (S == F - 1) {
                                         S = 0;
@@ -1879,7 +1866,6 @@
                                         S++;
                                     }
                                     W >>= 1;
-                                    J++;
                                 }
                             }
                             N--;
@@ -1908,7 +1894,7 @@
                         }
                     }
                     W = 2;
-                    for (J = 0; J < P;) {
+                    for (J = 0; J < P; J++) {
                         R = R << 1 | W & 1;
                         if (S == F - 1) {
                             S = 0;
@@ -1918,7 +1904,6 @@
                             S++;
                         }
                         W >>= 1;
-                        J++;
                     }
                     for (;;) {
                         R <<= 1;

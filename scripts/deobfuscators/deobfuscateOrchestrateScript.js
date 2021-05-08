@@ -639,6 +639,23 @@ const $scriptPreFinal = refactor(preFinishedOutput);
 
 
 $scriptPreFinal("Block > EmptyStatement, FunctionBody > EmptyStatement, SwitchCase > EmptyStatement").delete();
+$scriptPreFinal("ForStatement[update=null]").replace(statement =>{
+    if(statement.body.type == 'BlockStatement')
+    {
+        let innerBlock =  statement.body.block;
+        let lastBodyStatement = innerBlock.statements[innerBlock.statements.length - 1];
+
+        if(lastBodyStatement.type == 'ExpressionStatement' &&
+            lastBodyStatement.expression.type == 'UpdateExpression' )
+            {
+                statement.update = lastBodyStatement.expression;
+
+                innerBlock.statements = innerBlock.statements.slice(0, innerBlock.statements.length - 1);
+            }
+    }
+
+    return statement;
+});
 
 // Create output and write to file
 let output = beautify($scriptPreFinal.codegen().toString());
