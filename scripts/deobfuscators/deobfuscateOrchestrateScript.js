@@ -486,16 +486,16 @@ do
     while (keepLooping) {
         let nonSkipped = false;
 
-        keepLooping = $script("BinaryExpression[operator = ',']").replace(expression => {
-            let parent = $script(expression).parents().nodes[0];
+        keepLooping = $script("ExpressionStatement[expression.type='BinaryExpression'][expression.operator = ',']").replace(statement => {
+            let parent = $script(statement).parents().nodes[0];
             
             switch(parent.type)
             {
                 case 'ConditionalExpression':
-                    return expression;
+                    return statement;
 
-                case 'ExpressionStatement':
-                    parent = $script(parent).parents().nodes[0];
+                /*case 'ExpressionStatement':
+                    parent = $script(parent).parents().nodes[0];*/
             }
 
             if(!types.some((v, ind, arr)=> v == parent.type))
@@ -504,26 +504,31 @@ do
                 types.push(parent.type);
             }
 
-            if((parent.type.indexOf("Statement") < 0) && (parent.type != "Block"))
-                return expression;
-
-            //if (..)
-            //  a,b,d;
-            
             nonSkipped = true;
             isTransformed = true;
 
-            return new Shift.SimpleBlockStatement({
+            let initObj = {
                 __cf_ID: i++,
                 statements: [
                     new Shift.ExpressionStatement({
-                        expression: expression.left
+                        expression: statement.expression.left
                     }),
                     new Shift.ExpressionStatement({
-                        expression: expression.right
+                        expression: statement.expression.right
                     })
                 ]
-            });
+            };
+
+            let resultNode;
+
+            if (statementsToExpandAsBlock.indexOf(parent.type) < 0)
+                resultNode = new Shift.SimpleBlockStatement(initObj);
+            else
+                resultNode = new Shift.BlockStatement({
+                    block: new Shift.Block(initObj)
+                });
+
+            return resultNode;
         }).nodes.length > 0;
 
         keepLooping = keepLooping && nonSkipped;
