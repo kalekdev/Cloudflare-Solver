@@ -91,9 +91,13 @@ do
 
     //a=(b>c)?(d,e):(f,g) ->
     // if(b > c)
+    //{
     //  a = (d,e);
+    //}
     // else
+    // {
     //  b = (f,g);
+    // }
 
     // ConditionalExpression
     $script("ExpressionStatement").filter(node =>
@@ -110,18 +114,30 @@ do
             return new IfStatement({
                 type: "IfStatement",
                 test: condExpr.test,
-                consequent: new ExpressionStatement({
-                    expression: new AssignmentExpression({
-                        binding: assignment.binding,
-                        expression: condExpr.consequent
+                consequent: new Shift.BlockStatement({
+                    block: new Shift.Block({
+                        statements:[
+                            new ExpressionStatement({
+                                expression: new AssignmentExpression({
+                                    binding: assignment.binding,
+                                    expression: condExpr.consequent
+                                })
+                            })
+                        ]
                     })
                 }),
-                alternate: new ExpressionStatement({
-                    expression: new AssignmentExpression({
-                        binding: assignment.binding,
-                        expression: condExpr.alternate
+                alternate: new Shift.BlockStatement({
+                    block: new Shift.Block({
+                        statements:[
+                            new ExpressionStatement({
+                                expression: new AssignmentExpression({
+                                    binding: assignment.binding,
+                                    expression: condExpr.alternate
+                                })
+                            })
+                        ]
                     })
-                })
+                }),
             });
     });
 
@@ -213,16 +229,30 @@ do
     });*/
 
     $script("SwitchStatementWithDefault[discriminant.type = 'BinaryExpression'][discriminant.operator = ','], SwitchStatement[discriminant.type = 'BinaryExpression'][discriminant.operator = ',']").replace(node => {
+        let parent = $script(node).parents().nodes[0];
         let innerExpression = node.discriminant;
         node.discriminant = innerExpression.right;
 
+        let initObj = {
+            statements: [
+                new Shift.ExpressionStatement({
+                    expression: innerExpression.left
+                }),
+                node
+            ]
+        };
+
+        let resultNode;
+
+        if(statementsToExpandAsBlock.indexOf(parent.type) < 0)
+            resultNode = new Shift.SimpleBlockStatement(initObj);
+        else
+            resultNode = new Shift.BlockStatement({
+                block: new Shift.Block(initObj)
+            });
+
         isTransformed = true;
-        return new Shift.SimpleBlockStatement({
-            statements: [new Shift.ExpressionStatement({
-                expression: innerExpression.left
-            }),
-            node]
-        });
+        return resultNode;
     });
 
 
@@ -279,7 +309,9 @@ do
 
         statementsArray.push(new Shift.DoWhileStatement({
             body: new Shift.BlockStatement({
-                statements: [leftTestStatement, ifStatement]
+                block: new Shift.Block({
+                    statements: [leftTestStatement, ifStatement]
+                })
             }),
             test: new Shift.IdentifierExpression({
                 name: resultName
@@ -287,8 +319,10 @@ do
         }));
 
         isTransformed = true;
-        return new Shift.Block({
-            statements: statementsArray
+        return new Shift.BlockStatement({
+            block: new Shift.Block({
+                statements: statementsArray
+            })
         });
     });
 
@@ -309,7 +343,7 @@ do
 
         let resultNode;
 
-        if(statementsToExpandAsBlock.indexOf(parent.type) < 0)
+        if (statementsToExpandAsBlock.indexOf(parent.type) < 0)
             resultNode = new Shift.SimpleBlockStatement(initObj);
         else
             resultNode = new Shift.BlockStatement({
@@ -324,13 +358,15 @@ do
         let updateExpression = node.update;
 
         node.update = null;
-        node.body = new Shift.Block({
-            statements: [
-                node.body,
-                new Shift.ExpressionStatement({
-                    expression: updateExpression
-                }),
-            ]
+        node.body = new Shift.BlockStatement({
+            block: new Shift.Block({
+                statements: [
+                    node.body,
+                    new Shift.ExpressionStatement({
+                        expression: updateExpression
+                    }),
+                ]
+            })
         });
 
         isTransformed = true;
@@ -384,9 +420,10 @@ do
         return result;
     }).forEach(node => console.log(node));*/
 
+
     $script("ReturnStatement[expression.type = 'BinaryExpression'][expression.operator = ',']").replace(node => {
-        isTransformed = true;
-        return new Shift.SimpleBlockStatement({
+        let parent = $script(node).parents().nodes[0];
+        let initObj = {
             statements: [
                 new Shift.ExpressionStatement({
                     expression: node.expression.left
@@ -395,7 +432,19 @@ do
                     expression: node.expression.right
                 })
             ]
-        });
+        };
+
+        let resultNode;
+
+        if (statementsToExpandAsBlock.indexOf(parent.type) < 0)
+            resultNode = new Shift.SimpleBlockStatement(initObj);
+        else
+            resultNode = new Shift.BlockStatement({
+                block: new Shift.Block(initObj)
+            });
+
+        isTransformed = true;
+        return resultNode;
     });
 
     // fix var a = 2, b = (c =3, 2)
@@ -444,6 +493,9 @@ do
             {
                 case 'ConditionalExpression':
                     return expression;
+
+                case 'ExpressionStatement':
+                    parent = $script(parent).parents().nodes[0];
             }
 
             if(!types.some((v, ind, arr)=> v == parent.type))
@@ -454,7 +506,9 @@ do
 
             if((parent.type.indexOf("Statement") < 0) && (parent.type != "Block"))
                 return expression;
-            
+
+            //if (..)
+            //  a,b,d;
             
             nonSkipped = true;
             isTransformed = true;
