@@ -8,7 +8,7 @@ const Shift = require('shift-ast');
 const beautify = require('js-beautify');
 const fs = require('fs');
 
-const OUTPUT_STEPS = false;
+const OUTPUT_STEPS = true;
 
 // Read file and create refactor session
 let source = fs.readFileSync('../obfuscated/jsch.js', 'utf-8');
@@ -459,10 +459,13 @@ do
         let statementsArray = [];
         node.declaration.declarators.forEach(declarator => {
             if (declarator.init && declarator.init.type == 'BinaryExpression' && declarator.init.operator == ",") {
-                statementsArray.push(declarator.init.left);
+                statementsArray.push(new Shift.ExpressionStatement({
+                    expression: declarator.init.left
+                }));
                 declarator.init = declarator.init.right;
             }
         });
+
         statementsArray.push(node);
 
         isTransformed = true;

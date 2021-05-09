@@ -11,6 +11,7 @@ export default class CloudflareSolver {
     protected httpClient: Got;
     protected cookieJar: CookieJar;
 
+    protected StartTs: number;
     protected Dom: JSDOM;
     protected ChlOpts: any;
     protected ChlCtx: any;
@@ -38,6 +39,8 @@ export default class CloudflareSolver {
             throwHttpErrors: false,
             retry: 0
         });
+
+        this.StartTs = Date.now();
     }
 
     async extractOrchestrateValues() {
@@ -48,17 +51,15 @@ export default class CloudflareSolver {
         // @ts-ignore
         let stringArray = $script('StaticMemberExpression[object.type = "LiteralStringExpression"]').nodes[0].object.value.split(',');
         this.LzAlphabet = stringArray.find((s: string) => s.length == 65 && s.includes('$'));
-        console.log(this.LzAlphabet);
         this.GetChallengePath = String(scriptResponse.body.match(/\/[.|0-9]*:\d{10}:.{64}\//));
 
         this.ChlCtx = {
-            chLog: {'c': 0},
+            cvId: this.ChlOpts.cvId,
             chReq: this.ChlOpts.cType,
             cNounce: this.ChlOpts.cNounce,
             chC: 0, chCAS: 0, oV: 1,
             cRq: this.ChlOpts.cRq
         };
-        this.ChlCtx.chLog[this.ChlCtx.chLog.c++] = {'start': new Date().getTime()};
     }
 
     async solve(): Promise<CloudflareSolverResult> {
@@ -95,6 +96,7 @@ export default class CloudflareSolver {
 
         if (getChallengeResponse.statusCode != 200) throw new Error('Error GETing first challenge.');
         let firstChallengeScript = CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay);
+        console.log(firstChallengeScript);
 
 
 
