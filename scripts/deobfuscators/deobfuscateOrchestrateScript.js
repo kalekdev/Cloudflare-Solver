@@ -8,7 +8,7 @@ const Shift = require('shift-ast');
 const beautify = require('js-beautify');
 const fs = require('fs');
 
-const OUTPUT_STEPS = true;
+const OUTPUT_STEPS = false;
 
 // Read file and create refactor session
 let source = fs.readFileSync('../obfuscated/jsch.js', 'utf-8');
@@ -64,6 +64,11 @@ $script(`CallExpression[callee.name = "${arrayIndexingFunctionName}"]`).replace(
 
 function isCommaBinaryExpression(node) {
     return node && (node.type == "BinaryExpression") && (node.operator == ",")
+}
+
+// Replace dictionary proxy functions
+function isProxyFunc(node) {
+    return node.expression.type == "FunctionExpression" && node.expression.params.items.length === 2 && node.expression.body.statements.length === 1;
 }
 
 let statementsToExpandAsBlock = ["IfStatement",  "ForStatement", "WhileStatement", "DoWhileStatement"]
@@ -503,7 +508,6 @@ do
 
             if(!types.some((v, ind, arr)=> v == parent.type))
             {
-                console.log(parent.type);
                 types.push(parent.type);
             }
 
@@ -538,46 +542,53 @@ do
     }
 
 
-    // Replace dictionary proxy functions
-    function isProxyFunc(node) {
-        if (node.expression.type == "FunctionExpression" && node.expression.params.items.length === 2) return true;
-        return false;
-    }
-
+    // TODO: add support for replacing 3 argument proxy functions
+    // eg.     t["DyQsx"] = function(D, E, F) {
+    //             return D(E, F);
+    //         };
     $script("AssignmentExpression[binding.expression.value.length = 5]")
-        .filter(node => isProxyFunc(node))
+        .filter(node => isProxyFunc(node) || node.expression.type == "LiteralStringExpression")
         .forEach(node => {
-            $script(`CallExpression[callee.expression.value = "${node.binding.expression.value}"]`)
-                .replace(proxyCall => {
-                    if (node.expression.body.statements[0].expression.operator === undefined) {
-                        // Replace calls to CallExpression proxy function eg.
-                        // v[c('0x191')] = function (x, y) {
-                        //      return x(y)
-                        // }
-                        // v[c('0x191')](A,B) to:
-                        // A(B)
-                        
-                        isTransformed = true;
-                        return new Shift.CallExpression({
-                            callee: proxyCall.arguments[0],
-                            arguments: [
-                                proxyCall.arguments[1]
-                            ]
-                        })
-                    }
+            if (node.expression.type == "LiteralStringExpression") {
+                $script(`ComputedMemberExpression[expression.value = '${node.binding.expression.value}']`).replace(literalUsage => {
+                    return new Shift.LiteralStringExpression({
+                        value: node.expression.value
+                    })
+                })
+            } else {
+                $script(`CallExpression[callee.expression.value = "${node.binding.expression.value}"]`)
+                    .replace(proxyCall => {
+                        if (node.expression.body.statements[0].expression.operator === undefined) {
+                            // Replace calls to CallExpression proxy function eg.
+                            // v[c('0x191')] = function (x, y) {
+                            //      return x(y)
+                            // }
+                            // v[c('0x191')](A,B) to:
+                            // A(B)
 
-                    // Replace calls to BinaryExpression proxy function eg.
-                    // v[c('0x90')] = function (z, A) {
-                    //      return z < A
-                    // }
-                    isTransformed = true;
-                    return new Shift.BinaryExpression({
-                        operator: node.expression.body.statements[0].expression.operator,
-                        left: proxyCall.arguments[0],
-                        right: proxyCall.arguments[1]
+                            isTransformed = true;
+                            return new Shift.CallExpression({
+                                callee: proxyCall.arguments[0],
+                                arguments: [
+                                    proxyCall.arguments[1]
+                                ]
+                            })
+                        }
+
+                        // Replace calls to BinaryExpression proxy function eg.
+                        // v[c('0x90')] = function (z, A) {
+                        //      return z < A
+                        // }
+                        isTransformed = true;
+                        return new Shift.BinaryExpression({
+                            operator: node.expression.body.statements[0].expression.operator,
+                            left: proxyCall.arguments[0],
+                            right: proxyCall.arguments[1]
+                        });
                     });
-                });
+            }
         });
+
 
     $script("ExpressionStatement[expression.type='BinaryExpression'][expression.operator='&&']").replace(node => {
         isTransformed = true;
@@ -636,13 +647,14 @@ do
 } while (isTransformed);
 
 
-let preFinishedOutput = beautify($script.codegen().toString());
-fs.writeFileSync('../deobfuscated/deobJsch.preFinal.js', preFinishedOutput);
-const $scriptPreFinal = refactor(preFinishedOutput);
+if (OUTPUT_STEPS) {
+    let preFinishedOutput = beautify($script.codegen().toString());
+    fs.writeFileSync('../deobfuscated/deobJsch.preFinal.js', preFinishedOutput);
+}
 
 
-$scriptPreFinal("Block > EmptyStatement, FunctionBody > EmptyStatement, SwitchCase > EmptyStatement").delete();
-$scriptPreFinal("ForStatement[update=null]").replace(statement =>{
+$script("Block > EmptyStatement, FunctionBody > EmptyStatement, SwitchCase > EmptyStatement").delete();
+$script("ForStatement[update=null]").replace(statement =>{
     if(statement.body.type == 'BlockStatement')
     {
         let innerBlock =  statement.body.block;
@@ -660,6 +672,22 @@ $scriptPreFinal("ForStatement[update=null]").replace(statement =>{
     return statement;
 });
 
+
+// Delete proxy definitions
+$script("ExpressionStatement[expression.type = 'AssignmentExpression'][expression.binding.expression.value.length = 5]")
+    .filter(node => isProxyFunc(node.expression) || node.expression.expression.type == "LiteralStringExpression").delete();
+
+
+// Replace literal string equivalence checks
+$script("BinaryExpression[left.type = 'LiteralStringExpression'][right.type = 'LiteralStringExpression']").filter(node => {
+        return node.operator.includes('=')
+    }).replace(node => {
+        return new Shift.LiteralBooleanExpression({
+            value: eval(`"${node.left.value}" ${node.operator} "${node.right.value}"`)
+        })
+    })
+
+
 // Create output and write to file
-let output = beautify($scriptPreFinal.codegen().toString());
+let output = beautify($script.codegen().toString());
 fs.writeFileSync('../deobfuscated/deobJsch.js', output);
