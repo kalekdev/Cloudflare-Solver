@@ -1,9 +1,9 @@
 # Exclude modules and typescript bin
-/node_modules/
-!/node_modules/@jsoverson/shift-codegen
-!/node_modules/estraverse
-!/node_modules/shift-ast
-!/node_modules/shift-codegen
-!/node_modules/shift-reducer
-!/node_modules/shift-spec
+/node_modules/*
+!/node_modules/@jsoverson/shift-codegen/
+!/node_modules/estraverse/
+!/node_modules/shift-ast/
+!/node_modules/shift-codegen/
+!/node_modules/shift-reducer/
+!/node_modules/shift-spec/
 /dist/
