@@ -8,8 +8,8 @@ const Shift = require('shift-ast');
 const beautify = require('js-beautify');
 const fs = require('fs');
 
-const CRAY = '648d267efbc040a2';
-const FILE_NAME = 'cb4e214a6fb29eb7c5dc98298cba9367293a2eaf';
+const CRAY = '63d343898f11bbb2';
+const FILE_NAME = 'finalChallengeEx';
 
 // Read file and create refactor session
 let source = fs.readFileSync('../obfuscated/' + FILE_NAME, 'utf-8');

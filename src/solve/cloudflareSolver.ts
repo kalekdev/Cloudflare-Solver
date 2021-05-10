@@ -3,7 +3,9 @@ import got, {Got} from "got";
 import * as tunnel from 'tunnel';
 import CloudflareUtils from "./cloudflareUtils";
 import {refactor} from "shift-refactor";
+const beautify = require('js-beautify');
 import {JSDOM} from 'jsdom';
+import {Script} from 'vm';
 
 export default class CloudflareSolver {
     protected solverOptions: CloudflareSolverOptions;
@@ -95,10 +97,25 @@ export default class CloudflareSolver {
         });
 
         if (getChallengeResponse.statusCode != 200) throw new Error('Error GETing first challenge.');
-        let firstChallengeScript = CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay);
+        let firstChallengeScript = new Script(beautify('debugger;' + CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay)));
+        CloudflareUtils.patchDom(this.Dom, this.ChlCtx, this.ChlOpts);
 
+        const vmContext = this.Dom.getInternalVMContext();
+        firstChallengeScript.runInContext(vmContext);
 
+        compressedCtx = CloudflareUtils.compressToEncodedURIComponent(JSON.stringify(this.ChlCtx), this.LzAlphabet).replace('+', '%2b');
+        payload = 'v_' + this.ChlOpts.cRay + '=' + compressedCtx;
 
+        let sendChallengeSolutionResponse = await this.httpClient.post(getChallengeUrl, {
+            headers: {
+                'Content-type': 'application/x-www-form-urlencoded',
+                'CF-Challenge': this.ChlOpts.cHash
+            },
+            body: payload
+        });
+
+        debugger;
+        if (getChallengeResponse.statusCode != 200) throw new Error('Error POSTing challenge solution.');
 
 
         return {

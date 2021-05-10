@@ -245,4 +245,13 @@ export default class CloudflareUtils {
         }
         return context_data.join("");
     }
+
+    static patchDom(dom: any, chlCtx: any, chlOpt: any) {
+        dom.window._cf_chl_ctx = chlCtx;
+        dom.window._cf_chl_opt = chlOpt;
+
+        dom.window._cf_atob = function (data) {
+            return Buffer.from(data, 'base64').toString('binary');
+        }
+    }
 }
