@@ -8,7 +8,7 @@ const Shift = require('shift-ast');
 const beautify = require('js-beautify');
 const fs = require('fs');
 
-const CRAY = '63d343898f11bbb2';
+const CRAY = process.argv.slice(2)[0] || '63d343898f11bbb2';
 const FILE_NAME = 'finalChallengeEx';
 
 // Read file and create refactor session

@@ -1,4 +1,5 @@
 import {CookieJar} from "tough-cookie";
+var crypto = require('crypto');
 
 export default class CloudflareUtils {
     static extractChlOps(page: string): {} {
@@ -252,6 +253,66 @@ export default class CloudflareUtils {
 
         dom.window._cf_atob = function (data) {
             return Buffer.from(data, 'base64').toString('binary');
+        }
+
+        dom.SHA256 = function (value) {
+            return crypto.createHash('sha256').update(value).digest('hex');
+        }
+
+        let chForm = dom.window.document.getElementById('challenge-form');
+        let chFormAppendChild = chForm.appendChild;
+        chForm.appendChild = function (element) {
+            let successful = false;
+
+            switch (element.tagName) {
+                case "marquee":
+                    if (element.direction == "down" && element.behavior == "alternate" && element.innerHTML == "&nbsp;") {
+                        let firstDelay;
+                        let secondDelay;
+                        if (element.height == 10 && element.width == 10) {
+                            successful = true;
+                            firstDelay = 100;
+                            secondDelay = 184;
+                        } else if (element.height == 20 && element.width == 20) {
+                            successful = true;
+                            firstDelay = 0;
+                            secondDelay = 92;
+                        }
+                        // Else: execute challenge in browser and save values
+
+                        if (successful) {
+                            console.log("Solved marquee challenge");
+
+                            // Randomly chosen
+                            let currentTime = 15;
+                            setTimeout(element.onstart, currentTime);
+
+                            currentTime += firstDelay;
+                            setTimeout(element.onbounce, currentTime);
+                            for (let i = 1; i < element.loop - 1; i++) {
+                                currentTime += secondDelay;
+                                setTimeout(element.onbounce, currentTime);
+                            }
+
+                            currentTime += secondDelay;
+                            setTimeout(element.onfinish, currentTime);
+                        }
+                    }
+                    break;
+            }
+
+            if (!successful) {
+                try {
+                    // @ts-ignore
+                    document.jbjhgjhg();
+                }
+                catch (e) {
+                    console.log(e)
+                }
+                console.log("Unknown element:", element.outerHTML);
+            }
+
+            chFormAppendChild(element);
         }
     }
 }

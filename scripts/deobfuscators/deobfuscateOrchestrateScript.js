@@ -647,14 +647,13 @@ do
 } while (isTransformed);
 
 
-if (OUTPUT_STEPS) {
-    let preFinishedOutput = beautify($script.codegen().toString());
-    fs.writeFileSync('../deobfuscated/deobJsch.preFinal.js', preFinishedOutput);
-}
+let preFinishedOutput = beautify($script.codegen().toString());
+if (OUTPUT_STEPS) fs.writeFileSync('../deobfuscated/deobJsch.preFinal.js', preFinishedOutput);
 
+const $script2 = refactor(preFinishedOutput);
 
-$script("Block > EmptyStatement, FunctionBody > EmptyStatement, SwitchCase > EmptyStatement").delete();
-$script("ForStatement[update=null]").replace(statement =>{
+$script2("Block > EmptyStatement, FunctionBody > EmptyStatement, SwitchCase > EmptyStatement").delete();
+$script2("ForStatement[update=null]").replace(statement =>{
     if(statement.body.type == 'BlockStatement')
     {
         let innerBlock =  statement.body.block;
@@ -674,12 +673,12 @@ $script("ForStatement[update=null]").replace(statement =>{
 
 
 // Delete proxy definitions
-$script("ExpressionStatement[expression.type = 'AssignmentExpression'][expression.binding.expression.value.length = 5]")
+$script2("ExpressionStatement[expression.type = 'AssignmentExpression'][expression.binding.expression.value.length = 5]")
     .filter(node => isProxyFunc(node.expression) || node.expression.expression.type == "LiteralStringExpression").delete();
 
 
 // Replace literal string equivalence checks
-$script("BinaryExpression[left.type = 'LiteralStringExpression'][right.type = 'LiteralStringExpression']").filter(node => {
+$script2("BinaryExpression[left.type = 'LiteralStringExpression'][right.type = 'LiteralStringExpression']").filter(node => {
         return node.operator.includes('=')
     }).replace(node => {
         return new Shift.LiteralBooleanExpression({
@@ -689,5 +688,5 @@ $script("BinaryExpression[left.type = 'LiteralStringExpression'][right.type = 'L
 
 
 // Create output and write to file
-let output = beautify($script.codegen().toString());
+let output = beautify($script2.codegen().toString());
 fs.writeFileSync('../deobfuscated/deobJsch.js', output);

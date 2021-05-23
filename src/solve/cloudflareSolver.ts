@@ -4,6 +4,9 @@ import * as tunnel from 'tunnel';
 import CloudflareUtils from "./cloudflareUtils";
 import {refactor} from "shift-refactor";
 const beautify = require('js-beautify');
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
+const fs = require('fs');
 import {JSDOM} from 'jsdom';
 import {Script} from 'vm';
 
@@ -21,7 +24,7 @@ export default class CloudflareSolver {
     protected GetChallengePath!: string;
 
     constructor(options: CloudflareSolverOptions) {
-        options.userAgent = options.userAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.72 Safari/537.36";
+        options.userAgent = options.userAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0";
         this.solverOptions = options;
 
         // Bind cookie jar for usage in got
@@ -97,7 +100,11 @@ export default class CloudflareSolver {
         });
 
         if (getChallengeResponse.statusCode != 200) throw new Error('Error GETing first challenge.');
-        let firstChallengeScript = new Script(beautify('debugger;' + CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay)));
+        fs.writeFileSync('scripts/obfuscated/finalChallengeEx', getChallengeResponse.body);
+        let { stdout, stderr } = await exec('node deobfuscateChallenge.js ' + this.ChlOpts.cRay, {cwd: 'D:/Dev/Cloudsolve/Cloudflare/scripts/deobfuscators'});
+        console.log(stdout);
+        //let firstChallengeScript = new Script(beautify('debugger;' + CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay)));
+        let firstChallengeScript = new Script(beautify('debugger;' + fs.readFileSync('scripts/deobfuscated/finalChallengeEx.js', 'utf-8')));
         CloudflareUtils.patchDom(this.Dom, this.ChlCtx, this.ChlOpts);
 
         const vmContext = this.Dom.getInternalVMContext();
@@ -114,7 +121,6 @@ export default class CloudflareSolver {
             body: payload
         });
 
-        debugger;
         if (getChallengeResponse.statusCode != 200) throw new Error('Error POSTing challenge solution.');
 
 
