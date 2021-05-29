@@ -1,5 +1,6 @@
 import {CookieJar} from "tough-cookie";
-var crypto = require('crypto');
+const crypto = require('crypto');
+const lzString = require('lz-string');
 
 export default class CloudflareUtils {
     static extractChlOps(page: string): {} {
@@ -18,25 +19,36 @@ export default class CloudflareUtils {
         return jar.getCookiesSync(url).find(cookie => cookie.key == name)!.value
     }
 
-    static decodeChallenge(data: string, cRay: string): string {
-        var v, w, x, y, y, u, z, A;
+    static decodeChallenge(data: string, cRay: string, alphabet: string): string {
+        var v, w, x, y, z, A;
         v = {};
-        v["dLYaj"] = function(B, C) {
-            return B % C;
-        };
-        v["utvqb"] = function(B, C) {
-            return B - C;
-        };
         w = v;
         x = 32;
         y = cRay + "_" + 0;
-        y = y["replace"](/./g, function(B, C) {
-            x ^= y["charCodeAt"](C);
+        y = y.replace(/./g, function(B, C) {
+            x ^= y.charCodeAt(C);
         });
-        u = Buffer.from(data, 'base64').toString('binary');
+        data = Buffer.from(data, 'base64').toString('binary');
         z = [];
-        for (A = v = -1; !isNaN(v = u["charCodeAt"](++A)); z["push"](String["fromCharCode"](w["dLYaj"](w["utvqb"](v & 255, x) - A + 65535, 255))));
-        return z["join"]("");
+        for (A = v = -1; !isNaN(v = data.charCodeAt(++A)); z.push(String.fromCharCode(((v & 255) - x - A % 65535 + 65535) % 255)));
+        data = z.join("").replace(/ /g, "+");
+
+        let B = {};
+        z = function z(E, F) {
+            if (!B[E]) {
+                var G;
+                B[E] = {};
+                for (G = 0; G < E.length; G++) {
+                    B[E][E.charAt(G)] = G;
+                }
+            }
+            return B[E][F];
+        };
+
+        data = lzString._decompress(data.length, 32, function (H) {
+            return z(alphabet, data.charAt(H));
+        });
+        return decodeURIComponent(data);
     }
 
     static compressToEncodedURIComponent(uncompressed, alphabet): string {
@@ -264,7 +276,7 @@ export default class CloudflareUtils {
         chForm.appendChild = function (element) {
             let successful = false;
 
-            switch (element.tagName) {
+            switch (element.tagName.toLowerCase()) {
                 case "marquee":
                     if (element.direction == "down" && element.behavior == "alternate" && element.innerHTML == "&nbsp;") {
                         let firstDelay;

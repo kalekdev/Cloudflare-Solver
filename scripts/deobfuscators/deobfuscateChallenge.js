@@ -11,29 +11,8 @@ const fs = require('fs');
 const CRAY = process.argv.slice(2)[0] || '63d343898f11bbb2';
 const FILE_NAME = 'finalChallengeEx';
 
-// Read file and create refactor session
-let source = fs.readFileSync('../obfuscated/' + FILE_NAME, 'utf-8');
-function decodeChallenge(data, cRay) {
-    var v, w, x, y, y, u, z, A;
-    v = {};
-    v["dLYaj"] = function(B, C) {
-        return B % C;
-    };
-    v["utvqb"] = function(B, C) {
-        return B - C;
-    };
-    w = v;
-    x = 32;
-    y = cRay + "_" + 0;
-    y = y["replace"](/./g, function(B, C) {
-        x ^= y["charCodeAt"](C);
-    });
-    u = Buffer.from(data, 'base64').toString('binary');
-    z = [];
-    for (A = v = -1; !isNaN(v = u["charCodeAt"](++A)); z["push"](String["fromCharCode"](w["dLYaj"](w["utvqb"](v & 255, x) - A + 65535, 255))));
-    return z["join"]("");
-}
-let challengeSrc = decodeChallenge(source, CRAY);
+// Read file and create refactor
+let challengeSrc = fs.readFileSync('../obfuscated/' + FILE_NAME, 'utf-8');
 const $script = refactor(challengeSrc);
 
 let literalArray = eval(codegen($script('ComputedMemberExpression[expression.operator="++"]').nodes[0].object));

@@ -100,10 +100,9 @@ export default class CloudflareSolver {
         });
 
         if (getChallengeResponse.statusCode != 200) throw new Error('Error GETing first challenge.');
-        fs.writeFileSync('scripts/obfuscated/finalChallengeEx', getChallengeResponse.body);
+        fs.writeFileSync('scripts/obfuscated/finalChallengeEx', CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay, this.LzAlphabet));
         let { stdout, stderr } = await exec('node deobfuscateChallenge.js ' + this.ChlOpts.cRay, {cwd: 'D:/Dev/Cloudsolve/Cloudflare/scripts/deobfuscators'});
         console.log(stdout);
-        //let firstChallengeScript = new Script(beautify('debugger;' + CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay)));
         let firstChallengeScript = new Script(beautify('debugger;' + fs.readFileSync('scripts/deobfuscated/finalChallengeEx.js', 'utf-8')));
         CloudflareUtils.patchDom(this.Dom, this.ChlCtx, this.ChlOpts);
 
