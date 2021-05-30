@@ -1,4 +1,3 @@
-import {CookieJar} from 'tough-cookie';
 import got, {Got} from "got";
 import * as tunnel from 'tunnel';
 import CloudflareUtils from "./cloudflareUtils";
@@ -7,14 +6,14 @@ const beautify = require('js-beautify');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const fs = require('fs');
-import {JSDOM} from 'jsdom';
+import {JSDOM, CookieJar} from 'jsdom';
 import {Script} from 'vm';
 
 export default class CloudflareSolver {
     protected solverOptions: CloudflareSolverOptions;
     protected baseUrl!: string;
     protected httpClient: Got;
-    protected cookieJar: CookieJar;
+    protected cookieJar: JSDOM.cookieJar;
 
     protected StartTs: number;
     protected Dom: JSDOM;
@@ -77,8 +76,9 @@ export default class CloudflareSolver {
         this.Dom = new JSDOM(response.body, {
             runScripts: 'dangerously',
             pretendToBeVisual: true,
-            url: this.solverOptions.url
-        })
+            url: this.solverOptions.url,
+            cookieJar: this.cookieJar
+        });
 
         // GET necessary gifs
         await this.httpClient.get(`${this.baseUrl}/cdn-cgi/images/trace/jschal/js/nocookie/transparent.gif?ray=${this.ChlOpts.cRay}`);

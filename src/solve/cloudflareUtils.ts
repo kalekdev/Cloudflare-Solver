@@ -1,6 +1,7 @@
 import {CookieJar} from "tough-cookie";
 const crypto = require('crypto');
 const lzString = require('lz-string');
+import { getSync } from '@andreekeberg/imagedata'
 
 export default class CloudflareUtils {
     static extractChlOps(page: string): {} {
@@ -262,14 +263,40 @@ export default class CloudflareUtils {
     static patchDom(dom: any, chlCtx: any, chlOpt: any) {
         dom.window._cf_chl_ctx = chlCtx;
         dom.window._cf_chl_opt = chlOpt;
+        dom.window.history.scrollRestoration = 'auto';
 
         dom.window._cf_atob = function (data) {
             return Buffer.from(data, 'base64').toString('binary');
         }
 
-        dom.SHA256 = function (value) {
+        dom.window.SHA256 = function (value) {
             return crypto.createHash('sha256').update(value).digest('hex');
         }
+
+        // Checking if height property has changed in Image challenge
+        Object.defineProperty(dom.window.Image.prototype, 'computedHeight', {
+            value: 0
+        });
+        Object.defineProperty(dom.window.Image.prototype, 'height', {
+            get: () => { // @ts-ignore
+                if (this.storedHeight) return this.storedHeight; return this.computedHeight },
+            set: (value) => {
+                // @ts-ignore
+                this.storedHeight = value;
+            }
+        });
+
+        Object.defineProperty(dom.window.Image.prototype, 'computedWidth', {
+            value: 0
+        });
+        Object.defineProperty(dom.window.Image.prototype, 'width', {
+            get: () => { // @ts-ignore
+                if (this.storedWidth) return this.storedWidth; return this.computedWidth },
+            set: (value) => {
+                // @ts-ignore
+                this.storedHeight = value;
+            }
+        });
 
         let chForm = dom.window.document.getElementById('challenge-form');
         let chFormAppendChild = chForm.appendChild;
@@ -311,6 +338,32 @@ export default class CloudflareUtils {
                         }
                     }
                     break;
+                case 'img':
+                    let image;
+                    if (element.src && element.src !== '') {
+                        if (element.src.includes('data:') && element.src.includes('base64')) {
+                            image = getSync(Buffer.from(element.src.split('base64,')[1], 'base64'));
+                        }
+                    }
+                    if (image) {
+                        element.naturalHeight = image.height;
+                        element.naturalWidth = image.width;
+
+                        // TODO: Check css
+                        if (element.storedHeight == undefined && element.storedWidth == undefined) {
+                            element.height = element.naturalHeight;
+                            element.width = element.naturalWidth;
+                        } else if (element.storedHeight != undefined && element.storedWidth == undefined) {
+                            let scaleFactor = element.storedHeight / element.naturalHeight;
+                            element.width = scaleFactor * element.naturalWidth;
+                        } else if (element.storedWidth != undefined && element.storedHeight == undefined) {
+                            let scaleFactor = element.storedWidth / element.naturalWidth;
+                            element.height = scaleFactor * element.naturalHeight;
+                        }
+
+                        successful = true;
+                    }
+                    break;
             }
 
             if (!successful) {
@@ -322,6 +375,8 @@ export default class CloudflareUtils {
                     console.log(e)
                 }
                 console.log("Unknown element:", element.outerHTML);
+            } else {
+                element.dispatchEvent('load');
             }
 
             chFormAppendChild(element);

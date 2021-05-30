@@ -8,6 +8,7 @@
     "run": "node dist/index.js"
   },
   "dependencies": {
+    "@andreekeberg/imagedata": "^1.0.2",
     "express": "^4.17.1",
     "got": "^11.8.2",
     "hpagent": "^0.1.1",
