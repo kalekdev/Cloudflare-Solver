@@ -1,7 +1,8 @@
 import {CookieJar} from "tough-cookie";
+import {JSDOM} from 'jsdom';
 const crypto = require('crypto');
 const lzString = require('lz-string');
-import { getSync } from '@andreekeberg/imagedata'
+import {getSync} from '@andreekeberg/imagedata'
 
 export default class CloudflareUtils {
     static extractChlOps(page: string): {} {
@@ -16,7 +17,7 @@ export default class CloudflareUtils {
         return protocol + '//' + host;
     }
 
-    static getCookie(jar: CookieJar, url: string, name:  string): string {
+    static getCookie(jar: CookieJar, url: string, name: string): string {
         return jar.getCookiesSync(url).find(cookie => cookie.key == name)!.value
     }
 
@@ -26,12 +27,12 @@ export default class CloudflareUtils {
         w = v;
         x = 32;
         y = cRay + "_" + 0;
-        y = y.replace(/./g, function(B, C) {
+        y = y.replace(/./g, function (B, C) {
             x ^= y.charCodeAt(C);
         });
         data = Buffer.from(data, 'base64').toString('binary');
         z = [];
-        for (A = v = -1; !isNaN(v = data.charCodeAt(++A)); z.push(String.fromCharCode(((v & 255) - x - A % 65535 + 65535) % 255)));
+        for (A = v = -1; !isNaN(v = data.charCodeAt(++A)); z.push(String.fromCharCode(((v & 255) - x - A % 65535 + 65535) % 255))) ;
         data = z.join("").replace(/ /g, "+");
 
         let B = {};
@@ -54,110 +55,111 @@ export default class CloudflareUtils {
 
     static compressToEncodedURIComponent(uncompressed, alphabet): string {
         let bitsPerChar = 6;
+
         function getCharFromInt(F: any): string {
             return alphabet.charAt(F);
         }
 
         if (uncompressed == null) return "";
         var i, value,
-            context_dictionary= {},
-            context_dictionaryToCreate= {},
-            context_c="",
-            context_wc="",
-            context_w="",
-            context_enlargeIn= 2, // Compensate for the first entry which should not count
-            context_dictSize= 3,
-            context_numBits= 2,
-            context_data: any=[],
-            context_data_val=0,
-            context_data_position=0,
+            context_dictionary = {},
+            context_dictionaryToCreate = {},
+            context_c = "",
+            context_wc = "",
+            context_w = "",
+            context_enlargeIn = 2, // Compensate for the first entry which should not count
+            context_dictSize = 3,
+            context_numBits = 2,
+            context_data: any = [],
+            context_data_val = 0,
+            context_data_position = 0,
             ii;
 
-        for (ii = 0; ii  < uncompressed .length; ii  += 1) {
-            context_c = uncompressed.charAt(ii );
+        for (ii = 0; ii < uncompressed.length; ii += 1) {
+            context_c = uncompressed.charAt(ii);
             if (!Object.prototype.hasOwnProperty.call(context_dictionary, context_c)) {
                 context_dictionary[context_c] = context_dictSize++;
                 context_dictionaryToCreate[context_c] = !0;
             }
             context_wc = context_w + context_c;
-            if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc )) context_w = context_wc ;
+            if (Object.prototype.hasOwnProperty.call(context_dictionary, context_wc)) context_w = context_wc;
             else {
                 if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
                     if (context_w.charCodeAt(0) < 256) {
-                        for (i = 0; i < context_numBits;i++) {
+                        for (i = 0; i < context_numBits; i++) {
                             context_data_val <<= 1;
-                            if (context_data_position  == bitsPerChar - 1) {
-                                context_data_position  = 0;
+                            if (context_data_position == bitsPerChar - 1) {
+                                context_data_position = 0;
                                 context_data.push(getCharFromInt(context_data_val));
-                                context_data_val  = 0;
-                            } else {
-                                context_data_position ++;
-                            }
-                        }
-                        value = context_w.charCodeAt(0);
-                        for (i = 0; i < 8;i++) {
-                            context_data_val  = context_data_val  << 1 | value  & 1;
-                            if (context_data_position  == bitsPerChar - 1) {
-                                context_data_position  = 0;
-                                context_data.push(getCharFromInt(context_data_val));
-                                context_data_val  = 0;
+                                context_data_val = 0;
                             } else {
                                 context_data_position++;
                             }
-                            value  >>= 1;
+                        }
+                        value = context_w.charCodeAt(0);
+                        for (i = 0; i < 8; i++) {
+                            context_data_val = context_data_val << 1 | value & 1;
+                            if (context_data_position == bitsPerChar - 1) {
+                                context_data_position = 0;
+                                context_data.push(getCharFromInt(context_data_val));
+                                context_data_val = 0;
+                            } else {
+                                context_data_position++;
+                            }
+                            value >>= 1;
                         }
                     } else {
-                        value  = 1;
-                        for (i = 0; i < context_numBits;i++) {
-                            context_data_val  = context_data_val  << 1 | value ;
-                            if (context_data_position  == bitsPerChar - 1) {
-                                context_data_position  = 0;
+                        value = 1;
+                        for (i = 0; i < context_numBits; i++) {
+                            context_data_val = context_data_val << 1 | value;
+                            if (context_data_position == bitsPerChar - 1) {
+                                context_data_position = 0;
                                 context_data.push(getCharFromInt(context_data_val));
-                                context_data_val  = 0;
+                                context_data_val = 0;
                             } else {
-                                context_data_position ++;
+                                context_data_position++;
                             }
                             value = 0;
                         }
-                        value  = context_w.charCodeAt(0);
+                        value = context_w.charCodeAt(0);
                         for (i = 0; i < 16; i++) {
-                            context_data_val  = context_data_val  << 1 | value  & 1;
-                            if (context_data_position  == bitsPerChar - 1) {
-                                context_data_position  = 0;
-                                context_data.push(getCharFromInt(context_data_val ));
-                                context_data_val  = 0;
+                            context_data_val = context_data_val << 1 | value & 1;
+                            if (context_data_position == bitsPerChar - 1) {
+                                context_data_position = 0;
+                                context_data.push(getCharFromInt(context_data_val));
+                                context_data_val = 0;
                             } else {
-                                context_data_position ++;
+                                context_data_position++;
                             }
-                            value  >>= 1;
+                            value >>= 1;
                         }
                     }
                     context_enlargeIn--;
                     if (context_enlargeIn == 0) {
                         context_enlargeIn = Math.pow(2, context_numBits);
-                        context_numBits ++;
+                        context_numBits++;
                     }
                     delete context_dictionaryToCreate[context_w];
                 } else {
-                    value  = context_dictionary[context_w];
-                    for (i = 0; i < context_numBits ; i++) {
-                        context_data_val  = context_data_val  << 1 | value  & 1;
-                        if (context_data_position  == bitsPerChar - 1) {
-                            context_data_position  = 0;
-                            context_data.push(getCharFromInt(context_data_val ));
-                            context_data_val  = 0;
+                    value = context_dictionary[context_w];
+                    for (i = 0; i < context_numBits; i++) {
+                        context_data_val = context_data_val << 1 | value & 1;
+                        if (context_data_position == bitsPerChar - 1) {
+                            context_data_position = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val = 0;
                         } else {
-                            context_data_position ++;
+                            context_data_position++;
                         }
-                        value  >>= 1;
+                        value >>= 1;
                     }
                 }
                 context_enlargeIn--;
                 if (context_enlargeIn == 0) {
-                    context_enlargeIn = Math.pow(2, context_numBits );
-                    context_numBits ++;
+                    context_enlargeIn = Math.pow(2, context_numBits);
+                    context_numBits++;
                 }
-                context_dictionary[context_wc ] = context_dictSize++;
+                context_dictionary[context_wc] = context_dictSize++;
                 context_w = String(context_c);
             }
         }
@@ -166,96 +168,96 @@ export default class CloudflareUtils {
             if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate, context_w)) {
                 if (context_w.charCodeAt(0) < 256) {
                     for (i = 0; i < context_numBits; i++) {
-                        context_data_val  <<= 1;
-                        if (context_data_position  == bitsPerChar - 1) {
-                            context_data_position  = 0;
-                            context_data.push(getCharFromInt(context_data_val ));
-                            context_data_val  = 0;
+                        context_data_val <<= 1;
+                        if (context_data_position == bitsPerChar - 1) {
+                            context_data_position = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val = 0;
                         } else {
-                            context_data_position ++;
+                            context_data_position++;
                         }
                     }
-                    value  = context_w.charCodeAt(0);
+                    value = context_w.charCodeAt(0);
                     for (i = 0; i < 8; i++) {
-                        context_data_val  = context_data_val  << 1 | value  & 1;
-                        if (context_data_position  == bitsPerChar - 1) {
-                            context_data_position  = 0;
-                            context_data.push(getCharFromInt(context_data_val ));
-                            context_data_val  = 0;
+                        context_data_val = context_data_val << 1 | value & 1;
+                        if (context_data_position == bitsPerChar - 1) {
+                            context_data_position = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val = 0;
                         } else {
-                            context_data_position ++;
+                            context_data_position++;
                         }
-                        value  >>= 1;
+                        value >>= 1;
                     }
                 } else {
-                    value  = 1;
-                    for (i = 0; i < context_numBits;i++) {
-                        context_data_val  = context_data_val  << 1 | value ;
-                        if (context_data_position  == bitsPerChar - 1) {
-                            context_data_position  = 0;
-                            context_data.push(getCharFromInt(context_data_val ));
-                            context_data_val  = 0;
+                    value = 1;
+                    for (i = 0; i < context_numBits; i++) {
+                        context_data_val = context_data_val << 1 | value;
+                        if (context_data_position == bitsPerChar - 1) {
+                            context_data_position = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val = 0;
                         } else {
-                            context_data_position ++;
+                            context_data_position++;
                         }
                         value = 0;
                     }
-                    value  = context_w.charCodeAt(0);
+                    value = context_w.charCodeAt(0);
                     for (i = 0; i < 16; i++) {
-                        context_data_val  = context_data_val  << 1 | value  & 1;
-                        if (context_data_position  == bitsPerChar - 1) {
-                            context_data_position  = 0;
-                            context_data.push(getCharFromInt(context_data_val ));
-                            context_data_val  = 0;
+                        context_data_val = context_data_val << 1 | value & 1;
+                        if (context_data_position == bitsPerChar - 1) {
+                            context_data_position = 0;
+                            context_data.push(getCharFromInt(context_data_val));
+                            context_data_val = 0;
                         } else {
-                            context_data_position ++;
+                            context_data_position++;
                         }
-                        value  >>= 1;
+                        value >>= 1;
                     }
                 }
                 context_enlargeIn--;
                 if (context_enlargeIn == 0) {
-                    context_enlargeIn = Math.pow(2, context_numBits );
+                    context_enlargeIn = Math.pow(2, context_numBits);
                     context_numBits++;
                 }
                 delete context_dictionaryToCreate[context_w];
             } else {
-                value  = context_dictionary[context_w];
-                for (i = 0; i < context_numBits ; i++) {
-                    context_data_val  = context_data_val  << 1 | value  & 1;
-                    if (context_data_position  == bitsPerChar - 1) {
-                        context_data_position  = 0;
-                        context_data.push(getCharFromInt(context_data_val ));
-                        context_data_val  = 0;
+                value = context_dictionary[context_w];
+                for (i = 0; i < context_numBits; i++) {
+                    context_data_val = context_data_val << 1 | value & 1;
+                    if (context_data_position == bitsPerChar - 1) {
+                        context_data_position = 0;
+                        context_data.push(getCharFromInt(context_data_val));
+                        context_data_val = 0;
                     } else {
-                        context_data_position ++;
+                        context_data_position++;
                     }
-                    value  >>= 1;
+                    value >>= 1;
                 }
             }
             context_enlargeIn--;
             if (context_enlargeIn == 0) {
-                context_numBits ++;
+                context_numBits++;
             }
         }
         value = 2;
         for (i = 0; i < context_numBits; i++) {
-            context_data_val  = context_data_val  << 1 | value  & 1;
-            if (context_data_position  == bitsPerChar - 1) {
-                context_data_position  = 0;
-                context_data.push(getCharFromInt(context_data_val ));
-                context_data_val  = 0;
+            context_data_val = context_data_val << 1 | value & 1;
+            if (context_data_position == bitsPerChar - 1) {
+                context_data_position = 0;
+                context_data.push(getCharFromInt(context_data_val));
+                context_data_val = 0;
             } else {
-                context_data_position ++;
+                context_data_position++;
             }
-            value  >>= 1;
+            value >>= 1;
         }
         while (true) {
-            context_data_val  <<= 1;
-            if (context_data_position  == bitsPerChar - 1) {
-                context_data.push(getCharFromInt(context_data_val ));
+            context_data_val <<= 1;
+            if (context_data_position == bitsPerChar - 1) {
+                context_data.push(getCharFromInt(context_data_val));
                 break;
-            } else context_data_position ++;
+            } else context_data_position++;
         }
         return context_data.join("");
     }
@@ -279,7 +281,9 @@ export default class CloudflareUtils {
         });
         Object.defineProperty(dom.window.Image.prototype, 'height', {
             get: () => { // @ts-ignore
-                if (this.storedHeight) return this.storedHeight; return this.computedHeight },
+                if (this.storedHeight) return this.storedHeight;
+                return this.computedHeight
+            },
             set: (value) => {
                 // @ts-ignore
                 this.storedHeight = value;
@@ -291,7 +295,9 @@ export default class CloudflareUtils {
         });
         Object.defineProperty(dom.window.Image.prototype, 'width', {
             get: () => { // @ts-ignore
-                if (this.storedWidth) return this.storedWidth; return this.computedWidth },
+                if (this.storedWidth) return this.storedWidth;
+                return this.computedWidth
+            },
             set: (value) => {
                 // @ts-ignore
                 this.storedHeight = value;
@@ -303,8 +309,8 @@ export default class CloudflareUtils {
         chForm.appendChild = function (element) {
             let successful = false;
 
-            switch (element.tagName.toLowerCase()) {
-                case "marquee":
+            switch (element.tagName.toUpperCase()) {
+                case "MARQUEE":
                     if (element.direction == "down" && element.behavior == "alternate" && element.innerHTML == "&nbsp;") {
                         let firstDelay;
                         let secondDelay;
@@ -338,30 +344,18 @@ export default class CloudflareUtils {
                         }
                     }
                     break;
-                case 'img':
-                    let image;
-                    if (element.src && element.src !== '') {
-                        if (element.src.includes('data:') && element.src.includes('base64')) {
-                            image = getSync(Buffer.from(element.src.split('base64,')[1], 'base64'));
-                        }
-                    }
-                    if (image) {
-                        element.naturalHeight = image.height;
-                        element.naturalWidth = image.width;
+                case 'IMG':
+                    successful = calculateImageSize(element);
 
-                        // TODO: Check css
-                        if (element.storedHeight == undefined && element.storedWidth == undefined) {
-                            element.height = element.naturalHeight;
-                            element.width = element.naturalWidth;
-                        } else if (element.storedHeight != undefined && element.storedWidth == undefined) {
-                            let scaleFactor = element.storedHeight / element.naturalHeight;
-                            element.width = scaleFactor * element.naturalWidth;
-                        } else if (element.storedWidth != undefined && element.storedHeight == undefined) {
-                            let scaleFactor = element.storedWidth / element.naturalWidth;
-                            element.height = scaleFactor * element.naturalHeight;
-                        }
+                    break;
+                case 'SPAN':
+                    if (element.innerHTML.includes('&shy;') && element.childNodes.length == 3 && element.childNodes[0].nodeName.toUpperCase() == 'IMG' && element.childNodes[2].nodeName.toUpperCase() == 'IMG') {
+                        successful = calculateImageSize(element.childNodes[0]);
+                        successful = successful && calculateImageSize(element.childNodes[2]);
 
-                        successful = true;
+                        if (successful) {
+                            let observer = dom.window
+                        }
                     }
                     break;
             }
@@ -370,8 +364,7 @@ export default class CloudflareUtils {
                 try {
                     // @ts-ignore
                     document.jbjhgjhg();
-                }
-                catch (e) {
+                } catch (e) {
                     console.log(e)
                 }
                 console.log("Unknown element:", element.outerHTML);
@@ -382,4 +375,36 @@ export default class CloudflareUtils {
             chFormAppendChild(element);
         }
     }
+
+}
+
+function calculateImageSize(element: any): boolean {
+    let image;
+    if (element.src && element.src !== '') {
+        if (element.src.includes('data:') && element.src.includes('base64')) {
+            image = getSync(Buffer.from(element.src.split('base64,')[1], 'base64'));
+        }
+    }
+    if (image) {
+        let height = element.storedHeight || element.style.height.replace('px', '');
+        let width = element.storedWidth || element.style.width.replace('px', '');
+        element.naturalHeight = image.height;
+        element.naturalWidth = image.width;
+
+        // TODO: Check css
+        if (height == '' && width == '') {
+            element.height = element.naturalHeight;
+            element.width = element.naturalWidth;
+        } else if (height != '' && width == '') {
+            let scaleFactor = element.storedHeight / element.naturalHeight;
+            element.width = scaleFactor * element.naturalWidth;
+        } else if (width != '' && height == '') {
+            let scaleFactor = element.storedWidth / element.naturalWidth;
+            element.height = scaleFactor * element.naturalHeight;
+        }
+
+        return true;
+    }
+
+    return false;
 }
