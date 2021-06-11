@@ -1,5 +1,4 @@
 import {CookieJar} from "tough-cookie";
-import {JSDOM} from 'jsdom';
 const crypto = require('crypto');
 const lzString = require('lz-string');
 import {getSync} from '@andreekeberg/imagedata'
@@ -263,6 +262,10 @@ export default class CloudflareUtils {
     }
 
     static patchDom(dom: any, chlCtx: any, chlOpt: any) {
+        Object.defineProperty(dom.window.navigator, 'platform', {
+            value: 'Win32'
+        });
+
         dom.window._cf_chl_ctx = chlCtx;
         dom.window._cf_chl_opt = chlOpt;
         dom.window.history.scrollRestoration = 'auto';
@@ -279,9 +282,23 @@ export default class CloudflareUtils {
         Object.defineProperty(dom.window.Image.prototype, 'computedHeight', {
             value: 0
         });
+
+        Object.defineProperty(dom.window.Image.prototype, 'width', {
+            get: () => { // @ts-ignore
+                if (this.storedWidth) return this.storedWidth;
+                // @ts-ignore
+                return this.computedWidth
+            },
+            set: (value) => {
+                // @ts-ignore
+                this.storedHeight = value;
+            }
+        });
+
         Object.defineProperty(dom.window.Image.prototype, 'height', {
             get: () => { // @ts-ignore
                 if (this.storedHeight) return this.storedHeight;
+                // @ts-ignore
                 return this.computedHeight
             },
             set: (value) => {
@@ -293,19 +310,25 @@ export default class CloudflareUtils {
         Object.defineProperty(dom.window.Image.prototype, 'computedWidth', {
             value: 0
         });
-        Object.defineProperty(dom.window.Image.prototype, 'width', {
-            get: () => { // @ts-ignore
-                if (this.storedWidth) return this.storedWidth;
-                return this.computedWidth
-            },
-            set: (value) => {
-                // @ts-ignore
-                this.storedHeight = value;
-            }
+        Object.defineProperty(dom.window.Image.prototype, 'naturalHeight', {
+            value: 0,
+            writable: true
+        });
+        Object.defineProperty(dom.window.Image.prototype, 'naturalWidth', {
+            value: 0,
+            writable: true
+        });
+        Object.defineProperty(dom.window.HTMLSpanElement.prototype, 'offsetHeight', {
+            value: 0,
+            writable: true
+        });
+        Object.defineProperty(dom.window.HTMLSpanElement.prototype, 'offsetWidth', {
+            value: 0,
+            writable: true
         });
 
         let chForm = dom.window.document.getElementById('challenge-form');
-        let chFormAppendChild = chForm.appendChild;
+        chForm.appendChildOriginal = chForm.appendChild;
         chForm.appendChild = function (element) {
             let successful = false;
 
@@ -349,12 +372,36 @@ export default class CloudflareUtils {
 
                     break;
                 case 'SPAN':
-                    if (element.innerHTML.includes('&shy;') && element.childNodes.length == 3 && element.childNodes[0].nodeName.toUpperCase() == 'IMG' && element.childNodes[2].nodeName.toUpperCase() == 'IMG') {
+                    if (element.innerHTML.includes('\u{AD}') && element.childNodes.length == 3 && element.childNodes[0].nodeName.toUpperCase() == 'IMG' && element.childNodes[2].nodeName.toUpperCase() == 'IMG') {
                         successful = calculateImageSize(element.childNodes[0]);
                         successful = successful && calculateImageSize(element.childNodes[2]);
 
                         if (successful) {
-                            let observer = dom.window
+                            function calculateNewHeight() {
+                                let currentWidth = element.style.width.replace('px', '');
+                                let totalWidth = element.childNodes[0].style.width.replace('px', ''); + element.childNodes[2].style.width.replace('px', '');
+
+                                if (currentWidth < totalWidth) {
+                                    element.offsetHeight = element.childNodes[0].height + element.childNodes[2].height;
+                                } else {
+                                    element.offsetHeight = Math.max(element.childNodes[0].height, element.childNodes[2].height);
+                                }
+                            }
+
+                            calculateNewHeight();
+                            let onStyleChanged = function (mutationList) {
+                                mutationList.forEach(mutation => {
+                                    if (mutation.target == 'width') {
+                                        calculateNewHeight();
+                                    }
+                                });
+                            }
+
+                            let observer = new dom.window.MutationObserver(onStyleChanged);
+                            observer.observe(element, {
+                                attributes: true,
+                                attributeFilter: ['style']
+                            });
                         }
                     }
                     break;
@@ -369,10 +416,12 @@ export default class CloudflareUtils {
                 }
                 console.log("Unknown element:", element.outerHTML);
             } else {
-                element.dispatchEvent('load');
+                if (element.tagName != 'SPAN') {
+                    element.dispatchEvent(new dom.window.Event('load'));
+                }
             }
 
-            chFormAppendChild(element);
+            chForm.appendChildOriginal(element);
         }
     }
 
@@ -396,10 +445,10 @@ function calculateImageSize(element: any): boolean {
             element.height = element.naturalHeight;
             element.width = element.naturalWidth;
         } else if (height != '' && width == '') {
-            let scaleFactor = element.storedHeight / element.naturalHeight;
+            let scaleFactor = height / element.naturalHeight;
             element.width = scaleFactor * element.naturalWidth;
         } else if (width != '' && height == '') {
-            let scaleFactor = element.storedWidth / element.naturalWidth;
+            let scaleFactor = width / element.naturalWidth;
             element.height = scaleFactor * element.naturalHeight;
         }
 

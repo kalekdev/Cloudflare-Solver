@@ -6,7 +6,7 @@ const beautify = require('js-beautify');
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const fs = require('fs');
-import {JSDOM, CookieJar} from 'jsdom';
+import {JSDOM, CookieJar, ResourceLoader} from 'jsdom';
 import {Script} from 'vm';
 
 export default class CloudflareSolver {
@@ -19,6 +19,7 @@ export default class CloudflareSolver {
     protected Dom: JSDOM;
     protected ChlOpts: any;
     protected ChlCtx: any;
+    protected PerformanceEntries: any[];
     protected LzAlphabet!: string;
     protected GetChallengePath!: string;
 
@@ -45,6 +46,7 @@ export default class CloudflareSolver {
         });
 
         this.StartTs = Date.now();
+        this.PerformanceEntries = [];
     }
 
     async extractOrchestrateValues() {
@@ -77,12 +79,23 @@ export default class CloudflareSolver {
             runScripts: 'dangerously',
             pretendToBeVisual: true,
             url: this.solverOptions.url,
-            cookieJar: this.cookieJar
+            cookieJar: this.cookieJar,
+            resources: new ResourceLoader({
+                userAgent: this.solverOptions.userAgent
+            })
         });
 
         // GET necessary gifs
-        await this.httpClient.get(`${this.baseUrl}/cdn-cgi/images/trace/jschal/js/nocookie/transparent.gif?ray=${this.ChlOpts.cRay}`);
-        await this.httpClient.get(`${this.baseUrl}/cdn-cgi/images/trace/jschal/nojs/transparent.gif?ray=${this.ChlOpts.cRay}`);
+        let firstGifResponse = await this.httpClient.get(`${this.baseUrl}/cdn-cgi/images/trace/jschal/js/nocookie/transparent.gif?ray=${this.ChlOpts.cRay}`);
+        this.PerformanceEntries.push({
+            name: `${this.baseUrl}/cdn-cgi/images/trace/jschal/js/nocookie/transparent.gif?ray=${this.ChlOpts.cRay}`,
+            nextHopProtocol: 'http/1.1',
+            initiatorType: 'img',
+            encodedBodySize: firstGifResponse.headers["content-length"],
+            transferSize: //TODO
+        });
+
+        let secondGifResponse = await this.httpClient.get(`${this.baseUrl}/cdn-cgi/images/trace/jschal/nojs/transparent.gif?ray=${this.ChlOpts.cRay}`);
         await this.extractOrchestrateValues();
 
         this.cookieJar.setCookieSync('cf_chl_prog=e', this.baseUrl);
