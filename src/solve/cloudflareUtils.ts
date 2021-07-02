@@ -261,7 +261,7 @@ export default class CloudflareUtils {
         return context_data.join("");
     }
 
-    static patchDom(dom: any, chlCtx: any, chlOpt: any) {
+    static patchDom(dom: any, chlCtx: any, chlOpt: any, performanceEntries: {}[]) {
         Object.defineProperty(dom.window.navigator, 'platform', {
             value: 'Win32'
         });
@@ -326,6 +326,22 @@ export default class CloudflareUtils {
             value: 0,
             writable: true
         });
+
+        dom.window.performance.getEntries = function() {
+            return performanceEntries
+        }
+
+        dom.window.performance.mark = function(name) {
+            let entry = {
+                duration: 0,
+                entryType: 'mark',
+                name: name,
+                startTime: Date.now()
+            }
+
+            performanceEntries.push(entry);
+            return entry
+        }
 
         let chForm = dom.window.document.getElementById('challenge-form');
         chForm.appendChildOriginal = chForm.appendChild;
@@ -423,6 +439,17 @@ export default class CloudflareUtils {
 
             chForm.appendChildOriginal(element);
         }
+    }
+
+    static getTransferSize(httpVersion, statusMessage, rawHeaders, contentLength): number {
+        let transferSize = httpVersion.length + statusMessage.length + 7; // HTTP 1.1 200 OK\n\r
+
+        for (let i = 0; i < rawHeaders.length; i += 2) {
+            transferSize += rawHeaders[i].length + 2 + rawHeaders[i + 1].length + 2;
+        }
+
+        transferSize += 2 + contentLength;
+        return transferSize
     }
 
 }
