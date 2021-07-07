@@ -327,6 +327,20 @@ export default class CloudflareUtils {
             writable: true
         });
 
+        Object.defineProperty(dom.window.HTMLInputElement.prototype, 'maxLength', {
+            value: -1,
+            writable: true
+        });
+        Object.defineProperty(dom.window.HTMLTextAreaElement.prototype, 'maxLength', {
+            value: -1,
+            writable: true
+        });
+
+        Object.defineProperty(dom.window.navigator, 'plugins', {
+            value: [],
+            writable: true
+        });
+
         dom.window.performance.getEntries = function() {
             return performanceEntries
         }
@@ -343,10 +357,38 @@ export default class CloudflareUtils {
             return entry
         }
 
+        dom.window.Err0r = function (name) {
+
+            let stackMessage = '';
+            let errorObj = {
+                name: name
+            };
+
+            try {
+                throw new Error(name);
+            } catch (e) {
+                stackMessage = e.stack;
+            }
+
+            let stackArray = stackMessage.split('\n');
+            let firstElement = stackArray.shift();
+            stackArray = stackArray.slice(1);
+            // @ts-ignore
+            stackArray.unshift(firstElement);
+            stackMessage = stackArray.join('\n');
+
+            Object.defineProperty(errorObj, 'stack', {
+                value: stackMessage
+            });
+
+            return errorObj
+        };
+
         let chForm = dom.window.document.getElementById('challenge-form');
         chForm.appendChildOriginal = chForm.appendChild;
         chForm.appendChild = function (element) {
             let successful = false;
+            let shouldObserve = false;
 
             switch (element.tagName.toUpperCase()) {
                 case "MARQUEE":
@@ -405,7 +447,8 @@ export default class CloudflareUtils {
                             }
 
                             calculateNewHeight();
-                            let onStyleChanged = function (mutationList) {
+
+                            var onStyleChanged = function (mutationList) {
                                 mutationList.forEach(mutation => {
                                     if (mutation.target == 'width') {
                                         calculateNewHeight();
@@ -413,11 +456,8 @@ export default class CloudflareUtils {
                                 });
                             }
 
-                            let observer = new dom.window.MutationObserver(onStyleChanged);
-                            observer.observe(element, {
-                                attributes: true,
-                                attributeFilter: ['style']
-                            });
+                            var observer = new dom.window.MutationObserver(onStyleChanged);
+                            shouldObserve = true;
                         }
                     }
                     break;
@@ -438,6 +478,13 @@ export default class CloudflareUtils {
             }
 
             chForm.appendChildOriginal(element);
+
+            if (shouldObserve) {
+                observer.observe(element, {
+                    attributes: true,
+                    attributeFilter: ['style']
+                });
+            }
         }
     }
 

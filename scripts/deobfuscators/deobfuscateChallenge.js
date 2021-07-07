@@ -53,6 +53,12 @@ do {
     });
 } while (isTransformed)
 
+$script('IdentifierExpression[name="Error"]').replace(node => {
+    return new Shift.IdentifierExpression({
+        name: 'Err0r'
+    });
+});
+
 // Create output and write to file
 let output = beautify($script.codegen().toString());
 fs.writeFileSync('../deobfuscated/' + FILE_NAME + '.js', output);

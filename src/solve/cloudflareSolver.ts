@@ -154,6 +154,7 @@ export default class CloudflareSolver {
         });
 
         if (getChallengeResponse.statusCode != 200) throw new Error('Error GETing first challenge.');
+        // In final script, refactor should only replace Error with Err0r (no beautifying etc)
         fs.writeFileSync('scripts/obfuscated/finalChallengeEx', CloudflareUtils.decodeChallenge(getChallengeResponse.body, this.ChlOpts.cRay, this.LzAlphabet));
         let { stdout, stderr } = await exec('node deobfuscateChallenge.js ' + this.ChlOpts.cRay, {cwd: 'D:/Dev/Cloudsolve/Cloudflare/scripts/deobfuscators'});
         console.log(stdout);
@@ -161,6 +162,7 @@ export default class CloudflareSolver {
         CloudflareUtils.patchDom(this.Dom, this.ChlCtx, this.ChlOpts, this.PerformanceEntries);
 
         const vmContext = this.Dom.getInternalVMContext();
+
         firstChallengeScript.runInContext(vmContext);
 
         compressedCtx = CloudflareUtils.compressToEncodedURIComponent(JSON.stringify(this.ChlCtx), this.LzAlphabet).replace('+', '%2b');
@@ -174,7 +176,7 @@ export default class CloudflareSolver {
             body: payload
         });
 
-        if (getChallengeResponse.statusCode != 200) throw new Error('Error POSTing challenge solution.');
+        if (sendChallengeSolutionResponse.statusCode != 200) throw new Error('Error POSTing challenge solution.');
 
 
         return {
