@@ -359,23 +359,17 @@ export default class CloudflareUtils {
 
         dom.window.Err0r = function (name) {
 
-            let stackMessage = '';
+            let stackMessage = `anonymous/_[_[0]]/<@https://soap2day.to/cdn-cgi/challenge-platform/h/b/orchestrate/jsch/v1?ray=${dom.window._cf_chl_opt.cRay} line 1 > Function:5:7308\n`;
             let errorObj = {
                 name: name
             };
 
-            try {
-                throw new Error(name);
-            } catch (e) {
-                stackMessage = e.stack;
-            }
-
-            let stackArray = stackMessage.split('\n');
+            /*let stackArray = stackMessage.split('\n');
             let firstElement = stackArray.shift();
             stackArray = stackArray.slice(1);
             // @ts-ignore
             stackArray.unshift(firstElement);
-            stackMessage = stackArray.join('\n');
+            stackMessage = stackArray.join('\n');*/
 
             Object.defineProperty(errorObj, 'stack', {
                 value: stackMessage
@@ -383,6 +377,37 @@ export default class CloudflareUtils {
 
             return errorObj
         };
+
+        function calculateNewHeight(element) {
+            let currentWidth = element.style.width.replace('px', '');
+            let totalWidth = element.childNodes[0].style.width.replace('px', '') + element.childNodes[2].style.width.replace('px', '');
+
+            if (currentWidth < totalWidth) {
+                element.offsetHeight = element.childNodes[0].height + element.childNodes[2].height;
+            } else {
+                element.offsetHeight = Math.max(element.childNodes[0].height, element.childNodes[2].height);
+            }
+        }
+
+        dom.window.document.createElementOriginal = dom.window.document.createElement;
+        dom.window.document.createElement = function (type) {
+            let element = dom.window.document.createElementOriginal(type);
+
+            if (type == 'span') {
+                let widthBuffer = '0px';
+                Object.defineProperty(element.style, 'width', {
+                    get(): any {
+                        return widthBuffer
+                    },
+                    set(v: any) {
+                        widthBuffer = v;
+                        if (element.challengeFlag) calculateNewHeight(element);
+                    }
+                })
+            }
+
+            return element;
+        }
 
         let chForm = dom.window.document.getElementById('challenge-form');
         chForm.appendChildOriginal = chForm.appendChild;
@@ -435,29 +460,8 @@ export default class CloudflareUtils {
                         successful = successful && calculateImageSize(element.childNodes[2]);
 
                         if (successful) {
-                            function calculateNewHeight() {
-                                let currentWidth = element.style.width.replace('px', '');
-                                let totalWidth = element.childNodes[0].style.width.replace('px', ''); + element.childNodes[2].style.width.replace('px', '');
-
-                                if (currentWidth < totalWidth) {
-                                    element.offsetHeight = element.childNodes[0].height + element.childNodes[2].height;
-                                } else {
-                                    element.offsetHeight = Math.max(element.childNodes[0].height, element.childNodes[2].height);
-                                }
-                            }
-
-                            calculateNewHeight();
-
-                            var onStyleChanged = function (mutationList) {
-                                mutationList.forEach(mutation => {
-                                    if (mutation.target == 'width') {
-                                        calculateNewHeight();
-                                    }
-                                });
-                            }
-
-                            var observer = new dom.window.MutationObserver(onStyleChanged);
-                            shouldObserve = true;
+                            element.challengeFlag = true;
+                            calculateNewHeight(element);
                         }
                     }
                     break;
@@ -478,13 +482,6 @@ export default class CloudflareUtils {
             }
 
             chForm.appendChildOriginal(element);
-
-            if (shouldObserve) {
-                observer.observe(element, {
-                    attributes: true,
-                    attributeFilter: ['style']
-                });
-            }
         }
     }
 
